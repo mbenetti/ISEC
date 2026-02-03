@@ -266,179 +266,126 @@ def load_custom_costs_from_excel(filename: str,
 
 ## Algorithm Pseudocode
 
+### Detailed Algorithm: Levenshtein-Damerau Distance with Custom Costs
+
+```latex
+\begin{algorithm}
+\caption{Levenshtein-Damerau Distance with Custom Operation Costs}
+\begin{algorithmic}[1]
+\Require{strings $s_1, s_2$; cost matrices $C_{sub}, C_{trans}$; default costs $c_{del}, c_{ins}, c_{sub}, c_{trans}$}
+\Ensure{distance $d$ and list of operations $\text{ops}$}
+
+\State $m \gets \text{length}(s_1)$
+\State $n \gets \text{length}(s_2)$
+\State $\text{max\_dist} \gets m + n$
+
+\State Initialize dictionary $H$ with $H[-1,-1] \gets \text{max\_dist}$
+\State Initialize dictionary $\text{da}$ (character last occurrence)
+
+\Comment{Base case initialization}
+\For{$i \gets 0$ to $m$}
+    \State $H[i, -1] \gets \text{max\_dist}$
+    \State $H[i, 0] \gets i \cdot c_{del}$
+\EndFor
+
+\For{$j \gets 0$ to $n$}
+    \State $H[-1, j] \gets \text{max\_dist}$
+    \State $H[0, j] \gets j \cdot c_{ins}$
+\EndFor
+
+\Comment{Dynamic programming computation}
+\For{$i \gets 1$ to $m$}
+    \State $DB \gets 0$
+    \For{$j \gets 1$ to $n$}
+        \State $k \gets \text{da}[s_2[j-1]]$
+        \State $l \gets DB$
+        
+        \If{$s_1[i-1] = s_2[j-1]$}
+            \State $DB \gets j$
+            \State $H[i, j] \gets H[i-1, j-1]$
+        \Else
+            \State $c_{s} \gets C_{sub}[s_1[i-1], s_2[j-1]]$
+            \State $H[i, j] \gets \min \begin{cases}
+                H[i-1, j] + c_{del} & \text{(deletion)} \\
+                H[i, j-1] + c_{ins} & \text{(insertion)} \\
+                H[i-1, j-1] + c_s & \text{(substitution)}
+            \end{cases}$
+        \EndIf
+        
+        \Comment{Check transposition}
+        \If{$k > 0 \land l > 0$}
+            \State $c_t \gets C_{trans}[s_1[i-1], s_2[j-1]]$
+            \State $\text{trans\_cost} \gets H[k-1, l-1] + (i - k - 1) \cdot c_{del} + c_t + (j - l - 1) \cdot c_{ins}$
+            \State $H[i, j] \gets \min(H[i, j], \text{trans\_cost})$
+        \EndIf
+    \EndFor
+    \State $\text{da}[s_1[i-1]] \gets i$
+\EndFor
+
+\State $\text{ops} \gets \text{Backtrack}(s_1, s_2, H)$
+\State $d \gets H[m, n]$
+
+\Return $(\text{ops}, d)$
+\end{algorithmic}
+\end{algorithm}
 ```
-FUNCTION main()
-    Display configuration from .env
-    Load sentences from Excel file
-    
-    Create EditCostCalculator with configured default costs
-    Load custom costs from Excel file
-    
-    FOR each sentence pair (i, j) where i < j:
-        result = calculate_edit_distance_ld(sentences[i], sentences[j])
-        Display operation breakdown and metrics
-    END FOR
-END FUNCTION
 
+### Backtracking: Operation Reconstruction
 
-CLASS EditCostCalculator
-    
-    FUNCTION __init__(default costs)
-        Store all default operation costs
-        Initialize empty custom cost dictionaries
-        Initialize character list and matrices
-    END FUNCTION
-    
-    FUNCTION setup_characters(characters)
-        Store character set
-        Create substitution cost matrix (all default costs)
-        Create transposition cost matrix (all default costs)
-    END FUNCTION
-    
-    FUNCTION set_custom_costs(costs, operation_type)
-        IF operation_type == "substitution":
-            FOR each (char1, char2): cost in costs:
-                Store cost bidirectionally (symmetric)
-                Update substitution matrix
-        ELSE IF operation_type == "transposition":
-            FOR each (char1, char2): cost in costs:
-                Store cost bidirectionally (symmetric)
-                Update transposition matrix
-    END FUNCTION
-    
-    FUNCTION calculate_edit_distance_ld(str1, str2)
-        len1 = length(str1)
-        len2 = length(str2)
-        
-        // Initialize DP table
-        H = dictionary
-        da = defaultdict (last occurrence of each char)
-        max_dist = len1 + len2
-        
-        // Base cases
-        H[-1, -1] = max_dist
-        FOR i = 0 to len1:
-            H[i, -1] = max_dist
-            H[i, 0] = i * DEFAULT_DELETION_COST
-        FOR j = 0 to len2:
-            H[-1, j] = max_dist
-            H[0, j] = j * DEFAULT_INSERTION_COST
-        
-        // DP computation
-        FOR i = 1 to len1:
-            DB = 0
-            FOR j = 1 to len2:
-                k = da[str2[j-1]]
-                l = DB
-                
-                IF str1[i-1] == str2[j-1]:
-                    cost = 0
-                    DB = j
-                ELSE:
-                    cost = 1
-                    sub_cost = get_substitution_cost(str1[i-1], str2[j-1])
-                    H[i, j] = min(
-                        H[i-1, j] + DEFAULT_DELETION_COST,
-                        H[i, j-1] + DEFAULT_INSERTION_COST,
-                        H[i-1, j-1] + sub_cost
-                    )
-                
-                // Check transposition
-                IF k > 0 AND l > 0:
-                    trans_cost = get_transposition_cost(str1[i-1], str2[j-1])
-                    H[i, j] = min(
-                        H[i, j],
-                        H[k-1, l-1] + 
-                        (i - k - 1) * DEFAULT_DELETION_COST +
-                        trans_cost +
-                        (j - l - 1) * DEFAULT_INSERTION_COST
-                    )
-                
-                IF str1[i-1] == str2[j-1]:
-                    H[i, j] = H[i-1, j-1]
-            END FOR
-            
-            da[str1[i-1]] = i
-        END FOR
-        
-        // Backtrack to find operations
-        operations = backtrack_ld(str1, str2, H)
-        total_distance = H[len1, len2]
-        
-        RETURN DistanceResult(
-            str1, str2, total_distance, operations,
-            operation_cost_factor=OPERATION_COST_FACTOR
-        )
-    END FUNCTION
-    
-    FUNCTION _backtrack_ld(str1, str2, H)
-        operations = empty list
-        i = length(str1)
-        j = length(str2)
-        
-        WHILE i > 0 OR j > 0:
-            IF i > 0 AND j > 0 AND str1[i-1] == str2[j-1]:
-                Add match operation
-                i = i - 1
-                j = j - 1
-            ELSE IF i > 0 AND j > 0 AND can_transpose:
-                Add transposition operation
-                i = i - 2
-                j = j - 2
-            ELSE IF i > 0 AND j > 0:
-                Add substitution operation (cheaper path)
-                i = i - 1
-                j = j - 1
-            ELSE IF i > 0:
-                Add deletion operation
-                i = i - 1
-            ELSE IF j > 0:
-                Add insertion operation
-                j = j - 1
-        END WHILE
-        
-        REVERSE operations (they were built backwards)
-        RETURN operations
-    END FUNCTION
-    
-    FUNCTION calculate_all_distances(sentences)
-        results = empty list
-        
-        FOR i = 0 to len(sentences)-1:
-            FOR j = i+1 to len(sentences)-1:
-                result = calculate_edit_distance_ld(sentences[i], sentences[j])
-                Add result to results
-            END FOR
-        END FOR
-        
-        RETURN results
-    END FUNCTION
-    
-END CLASS
+```latex
+\begin{algorithm}
+\caption{Backtracking to Find Operations}
+\begin{algorithmic}[1]
+\Require{strings $s_1, s_2$; DP table $H$}
+\Ensure{list of operations $\text{ops}$}
 
+\State $i \gets \text{length}(s_1)$
+\State $j \gets \text{length}(s_2)$
+\State $\text{ops} \gets \emptyset$
 
-CLASS DistanceResult
-    PROPERTIES:
-        str1, str2: Strings compared
-        total_distance: Sum of all operation costs
-        operations: List of Operation objects
-        operation_cost_factor: k value for penalized distance
-    
-    COMPUTED PROPERTIES:
-        num_operations: Count of non-match operations
-        average_cost: total_distance / num_operations
-        penalized_distance: average_cost + (operation_cost_factor * total_distance)
-END CLASS
+\While{$i > 0 \lor j > 0$}
+    \If{$i > 0 \land j > 0 \land s_1[i-1] = s_2[j-1]$}
+        \State Append MATCH$(s_1[i-1])$ to $\text{ops}$
+        \State $i \gets i - 1$; $j \gets j - 1$
+    \ElsIf{$i > 1 \land j > 1 \land \text{CanTranspose}(s_1, s_2, i, j)$}
+        \State $c_t \gets C_{trans}[s_1[i-1], s_2[j-1]]$
+        \State Append TRANSPOSE$(s_1[i-1], s_2[j-1], c_t)$ to $\text{ops}$
+        \State $i \gets i - 2$; $j \gets j - 2$
+    \Else
+        \State Find minimum of $\{H[i-1,j], H[i,j-1], H[i-1,j-1]\}$
+        \If{minimum is $H[i-1,j]$}
+            \State Append DELETE$(s_1[i-1])$ to $\text{ops}$
+            \State $i \gets i - 1$
+        \ElsIf{minimum is $H[i,j-1]$}
+            \State Append INSERT$(s_2[j-1])$ to $\text{ops}$
+            \State $j \gets j - 1$
+        \Else
+            \State $c_s \gets C_{sub}[s_1[i-1], s_2[j-1]]$
+            \State Append SUBSTITUTE$(s_1[i-1], s_2[j-1], c_s)$ to $\text{ops}$
+            \State $i \gets i - 1$; $j \gets j - 1$
+        \EndIf
+    \EndIf
+\EndWhile
 
-
-CLASS Operation
-    PROPERTIES:
-        op_type: "match", "substitute", "insert", "delete", "transpose"
-        from_char: Character from str1
-        to_char: Character to str2
-        cost: Cost of this operation
-END CLASS
+\State Reverse $\text{ops}$
+\Return $\text{ops}$
+\end{algorithmic}
+\end{algorithm}
 ```
+
+### Data Structures
+
+**DistanceResult** class:
+- $\text{str1}, \text{str2}$: Input strings
+- $\text{operations}$: List of Operation objects
+- $\text{total\_distance}$: Sum of all operation costs
+- $\text{operation\_cost\_factor}$: $k$ value for penalized distance
+
+**Operation** class:
+- $\text{op\_type}$: Type of operation (match, insert, delete, substitute, transpose)
+- $\text{from\_char}$: Character from $s_1$
+- $\text{to\_char}$: Character to $s_2$
+- $\text{cost}$: Cost of this operation
 
 ## Simplified Algorithm (Basic Functionality)
 

@@ -255,6 +255,93 @@ class SemanticDistanceCalculator:
         
         return results
     
+    def find_closest_sentence(self, query_sentence: str) -> Optional[SemanticDistanceResult]:
+        """
+        Find the closest semantic sentence in the collection to the query sentence (excluding itself).
+        
+        Args:
+            query_sentence: The sentence to find matches for
+            
+        Returns:
+            SemanticDistanceResult with the closest sentence, or None if not found
+        """
+        if not self.collection:
+            print("Error: Collection not loaded. Call load_sentences() first.")
+            return None
+        
+        try:
+            # Get embedding for query sentence
+            query_embedding = self.get_embedding(query_sentence)
+            
+            # Query Chroma to find closest matches
+            # Request more results to ensure we can exclude the query sentence itself
+            all_docs = self.collection.get()["documents"]
+            n_results = min(len(all_docs), 10)  # Get up to 10 results
+            
+            results = self.collection.query(
+                query_embeddings=[query_embedding],
+                n_results=n_results,
+                include=["distances", "embeddings", "metadatas", "documents"]
+            )
+            
+            if not results or not results["documents"] or len(results["documents"][0]) == 0:
+                print(f"No results found for: {query_sentence}")
+                return None
+            
+            # Find the closest match that is NOT the query sentence itself
+            closest_idx = None
+            for i, doc in enumerate(results["documents"][0]):
+                if doc != query_sentence:
+                    closest_idx = i
+                    break
+            
+            if closest_idx is None:
+                print(f"No other matches found besides the query sentence itself")
+                return None
+            
+            closest_sentence = results["documents"][0][closest_idx]
+            closest_distance = results["distances"][0][closest_idx]
+            closest_similarity = 1 - closest_distance
+            
+            # Get metadata
+            query_metadata = self.metadata_cache.get(query_sentence, {})
+            closest_metadata = self.metadata_cache.get(closest_sentence, {})
+            
+            return SemanticDistanceResult(
+                str1=query_sentence,
+                str2=closest_sentence,
+                embedding1=query_embedding,
+                embedding2=results["embeddings"][0][closest_idx] if results["embeddings"] else [],
+                cosine_distance=closest_distance,
+                cosine_similarity=closest_similarity,
+                metadata1=query_metadata,
+                metadata2=closest_metadata
+            )
+        
+        except Exception as e:
+            print(f"Error finding closest sentence for '{query_sentence}': {e}")
+            return None
+    
+    def find_closest_for_all(self, sentences: List[str]) -> List[SemanticDistanceResult]:
+        """
+        Find the closest sentence for each sentence in the list.
+        
+        Args:
+            sentences: List of sentences to find closest matches for
+            
+        Returns:
+            List of SemanticDistanceResult with closest match for each sentence
+        """
+        results = []
+        
+        for i, sentence in enumerate(sentences):
+            print(f"Finding closest match for sentence {i+1}/{len(sentences)}: {sentence[:50]}...")
+            result = self.find_closest_sentence(sentence)
+            if result:
+                results.append(result)
+        
+        return results
+    
     def print_result(self, result: SemanticDistanceResult, show_embeddings: bool = False) -> None:
         """
         Print a formatted semantic distance result.
@@ -385,7 +472,22 @@ def main():
     
     # Print results
     calculator.print_batch_results(results)
+    
+    # Find and display closest sentence for each sentence
+    print("\n" + "=" * 80)
+    print("Closest Semantic Match for Each Sentence")
+    print("=" * 80)
+    
+    closest_results = calculator.find_closest_for_all(sentences)
+    
+    print("\n" + "=" * 80)
+    print("Closest Matches Analysis")
+    print("=" * 80)
+    
+    for result in closest_results:
+        calculator.print_result(result)
 
 
 if __name__ == "__main__":
     main()
+

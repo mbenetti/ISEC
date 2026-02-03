@@ -47,11 +47,13 @@ The script will:
 1. Load sentences from `Clases.xlsx` (default file from config)
 2. Generate embeddings using `embeddinggemma` model
 3. Store embeddings in Chroma vector database
-4. Calculate semantic distances for all sentence pairs
-5. Display results with similarity metrics
+4. Calculate semantic distances for **all sentence pairs**
+5. Display pairwise comparison results with similarity metrics
+6. Find and display the **closest semantic match for each sentence** (excluding itself)
 
 ### Example Output
 
+#### Pairwise Comparison:
 ```
 'XDKT11T3' ↔ 'XDKG11T3'
 --------------------------------------------------------------------------------
@@ -59,6 +61,18 @@ The script will:
   Similarity Percentage: 96.17%
   Cosine Distance: 0.0766
   Distance Percentage: 3.83%
+  Metadata (Sentence 1): {'frequency': 1}
+  Metadata (Sentence 2): {'frequency': 1}
+```
+
+#### Closest Match for Each Sentence:
+```
+'XDKT11T3' ↔ 'LDKT11T3'
+--------------------------------------------------------------------------------
+  Cosine Similarity: 0.8912
+  Similarity Percentage: 94.56%
+  Cosine Distance: 0.1088
+  Distance Percentage: 5.44%
   Metadata (Sentence 1): {'frequency': 1}
   Metadata (Sentence 2): {'frequency': 1}
 ```
@@ -91,9 +105,70 @@ result = calculator.calculate_semantic_distance(sent1, sent2)
 # Calculate distances for all pairs
 results = calculator.calculate_all_distances(sentences)
 
+# Find closest match for a single sentence (excluding itself)
+closest_result = calculator.find_closest_sentence(sentence)
+
+# Find closest match for all sentences (excluding each from itself)
+closest_results = calculator.find_closest_for_all(sentences)
+
 # Display results
-calculator.print_batch_results(results)
+calculator.print_result(result)  # Print single result
+calculator.print_batch_results(results)  # Print all pairwise results
+calculator.print_batch_results(closest_results)  # Print closest match results
 ```
+
+### Methods
+
+#### `find_closest_sentence(query_sentence)`
+Finds the closest semantic match for a single sentence in the collection.
+
+**Args:**
+- `query_sentence` (str): The sentence to find the closest match for
+
+**Returns:**
+- `SemanticDistanceResult`: Result containing metrics and metadata for the closest match
+- `None`: If no matches found (or only the query sentence exists)
+
+**Example:**
+```python
+result = calculator.find_closest_sentence("XDKT11T3")
+calculator.print_result(result)
+```
+
+#### `find_closest_for_all(sentences)`
+Finds the closest semantic match for each sentence in a list.
+
+**Args:**
+- `sentences` (List[str]): List of sentences to find closest matches for
+
+**Returns:**
+- `List[SemanticDistanceResult]`: Results for each sentence's closest match
+
+**Example:**
+```python
+closest_results = calculator.find_closest_for_all(sentences)
+for result in closest_results:
+    calculator.print_result(result)
+```
+
+#### `calculate_semantic_distance(str1, str2)`
+Calculates semantic distance between two specific sentences.
+
+**Args:**
+- `str1` (str): First sentence
+- `str2` (str): Second sentence
+
+**Returns:**
+- `SemanticDistanceResult`: Contains all metrics and metadata
+
+#### `calculate_all_distances(sentences)`
+Calculates semantic distances for all pairs of sentences.
+
+**Args:**
+- `sentences` (List[str]): List of sentences
+
+**Returns:**
+- `List[SemanticDistanceResult]`: Results for all pairs (excluding self-pairs)
 
 ### SemanticDistanceResult
 

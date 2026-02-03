@@ -54,7 +54,7 @@ class Config:
     DEFAULT_INSERTION_COST = get_float_env("DEFAULT_INSERTION_COST", 1.0)
     DEFAULT_DELETION_COST = get_float_env("DEFAULT_DELETION_COST", 1.0)
     DEFAULT_TRANSPOSITION_COST = get_float_env("DEFAULT_TRANSPOSITION_COST", 1.0)
-    OPERATION_COST_FACTOR = get_float_env('OPERATION_COST_FACTOR', 0.1)
+    COST_FACTOR_PENALIZATION = get_float_env('COST_FACTOR_PENALIZATION', 0.1)
     
     # File paths (loaded from .env)
     SENTENCES_FILE = get_string_env("SENTENCES_FILE", "Clases.xlsx")

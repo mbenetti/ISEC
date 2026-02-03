@@ -305,7 +305,7 @@ class EditCostCalculator:
         operations = self._backtrack_ld(str1, str2, H)
         total_distance = H[len1, len2]
         
-        return DistanceResult(str1, str2, total_distance, operations, operation_cost_factor=Config.OPERATION_COST_FACTOR)
+        return DistanceResult(str1, str2, total_distance, operations, operation_cost_factor=Config.COST_FACTOR_PENALIZATION)
 
     def _backtrack_ld(self, str1: str, str2: str, H: Dict) -> List[Operation]:
         """
