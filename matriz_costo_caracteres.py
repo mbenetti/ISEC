@@ -42,9 +42,17 @@ class DistanceResult:
         return self.total_distance / self.num_operations
     
     @property
+    def sum_insertion_deletion_costs(self) -> float:
+        """Sum of insertion and deletion operation costs."""
+        return sum(
+            op.cost for op in self.operations 
+            if op.op_type in ('insert', 'delete')
+        )
+    
+    @property
     def penalized_distance(self) -> float:
-        """Penalized distance: average_cost + (k * total_distance)."""
-        return self.average_cost + (self.operation_cost_factor * self.total_distance)
+        """Penalized distance: average_cost + (k * sum_insertion_deletion_costs)."""
+        return self.average_cost + (self.operation_cost_factor * self.sum_insertion_deletion_costs)
 
 
 class EditCostCalculator:
@@ -474,8 +482,9 @@ class EditCostCalculator:
         print(f"  Total Distance: {result.total_distance:.4f}")
         print(f"  Number of Operations: {result.num_operations}")
         if result.num_operations > 0:
-            print(f"  Average edition cost between sentences: {result.average_cost:.4f}")
-            print(f"  Penalized Distance (avg + k*total): {result.penalized_distance:.4f}")
+            print(f"  Average cost per operation: {result.average_cost:.4f}")
+            print(f"  Sum of insertion/deletion costs: {result.sum_insertion_deletion_costs:.4f}")
+            print(f"  Penalized Distance (avg + k*insertions_deletions): {result.penalized_distance:.4f}")
         
         print(f"\n  Operations:")
         total_cost = 0.0

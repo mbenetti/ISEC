@@ -1,0 +1,66 @@
+================================================================================
+Semantic Distance Calculator with Ollama Embeddings
+================================================================================
+
+Loaded 2 sentences from Clases.xlsx
+Sentences: ['Limpiador Dr. Beckmann de alfombras 2 en 1 poder oxi x 650 ml', 'Limpiador Dr. Beckmann de tapiz 2 en 1 poder oxi x 650 ml']
+
+Initialized SemanticDistanceCalculator
+  Ollama Host: http://localhost:11434
+  Embedding Model: embeddinggemma
+  Collection: sentences
+
+Generating embeddings for 2 sentences...
+  ✓ Embedded sentence 1/2: Limpiador Dr. Beckmann de alfombras 2 en 1 poder o...
+  ✓ Embedded sentence 2/2: Limpiador Dr. Beckmann de tapiz 2 en 1 poder oxi x...
+
+Loaded 2 embeddings into Chroma collection
+
+================================================================================
+Calculating semantic distances...
+================================================================================
+Calculated pair 1/1
+
+================================================================================
+Semantic Distance Results for All Pairs
+================================================================================
+
+'Limpiador Dr. Beckmann de alfombras 2 en 1 poder oxi x 650 ml' ↔ 'Limpiador Dr. Beckmann de tapiz 2 en 1 poder oxi x 650 ml'
+--------------------------------------------------------------------------------
+  Cosine Similarity: 0.9482
+  Similarity Percentage: 97.41%
+  Cosine Distance: 0.0518
+  Normalized Distance (0-1): 0.0259
+  Distance Percentage: 2.59%
+  Metadata (Sentence 1): {'frequency': 1}
+  Metadata (Sentence 2): {'frequency': 1}
+
+================================================================================
+Closest Semantic Match for Each Sentence
+================================================================================
+Finding closest match for sentence 1/2: Limpiador Dr. Beckmann de alfombras 2 en 1 poder o...
+Finding closest match for sentence 2/2: Limpiador Dr. Beckmann de tapiz 2 en 1 poder oxi x...
+
+================================================================================
+Closest Matches Analysis
+================================================================================
+
+'Limpiador Dr. Beckmann de alfombras 2 en 1 poder oxi x 650 ml' ↔ 'Limpiador Dr. Beckmann de tapiz 2 en 1 poder oxi x 650 ml'
+--------------------------------------------------------------------------------
+  Cosine Similarity: 0.9482
+  Similarity Percentage: 97.41%
+  Cosine Distance: 0.0518
+  Normalized Distance (0-1): 0.0259
+  Distance Percentage: 2.59%
+  Metadata (Sentence 1): {'frequency': 1}
+  Metadata (Sentence 2): {'frequency': 1}
+
+'Limpiador Dr. Beckmann de tapiz 2 en 1 poder oxi x 650 ml' ↔ 'Limpiador Dr. Beckmann de alfombras 2 en 1 poder oxi x 650 ml'
+--------------------------------------------------------------------------------
+  Cosine Similarity: 0.9482
+  Similarity Percentage: 97.41%
+  Cosine Distance: 0.0518
+  Normalized Distance (0-1): 0.0259
+  Distance Percentage: 2.59%
+  Metadata (Sentence 1): {'frequency': 1}
+  Metadata (Sentence 2): {'frequency': 1}

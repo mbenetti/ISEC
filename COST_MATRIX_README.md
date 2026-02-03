@@ -42,22 +42,30 @@ COSTS_OPERATION_COLUMN=Operation
 
 ### Penalized Distance Metric
 
-The calculator provides a **Penalized Distance** metric that combines two perspectives:
+The calculator provides a **Penalized Distance** metric that combines average cost with insertion/deletion penalties:
 
-$$\text{penalized\_distance} = \text{average\_cost} + (k \times \text{total\_cost})$$
+$$\text{penalized\_distance} = \text{average\_cost} + (k \times \text{cost\_insertions\_deletions})$$
 
 Where:
 - `average_cost` = total_cost / number_of_operations (average per-operation cost)
 - `k` = OPERATION_COST_FACTOR (default 0.1)
-- `total_cost` = sum of all operation costs
+- `cost_insertions_deletions` = sum of insertion and deletion operation costs (excluding substitutions and transpositions)
 
 **Example**: For distance between "XDKT11T3" and "XDKG11T3":
 - Total Cost: 0.5 (1 substitution of cost 0.5)
 - Num Operations: 1
 - Average Cost: 0.5 / 1 = 0.5
-- Penalized Distance: 0.5 + (0.1 × 0.5) = 0.55
+- Sum Insertions/Deletions: 0 (no insertions or deletions)
+- Penalized Distance: 0.5 + (0.1 × 0) = 0.5
 
-This metric provides a regularized view that penalizes sequences requiring many operations.
+**Example with insertions/deletions**: For "ABC" vs "AXBC":
+- Total Cost: 1.0 (1 insertion of cost 1.0)
+- Num Operations: 1
+- Average Cost: 1.0 / 1 = 1.0
+- Sum Insertions/Deletions: 1.0
+- Penalized Distance: 1.0 + (0.1 × 1.0) = 1.1
+
+This metric penalizes structural changes (insertions/deletions) more heavily than substitutions, useful for analyzing character-level transformations.
 
 ### Modifying Costs
 
