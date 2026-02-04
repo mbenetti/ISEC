@@ -7,7 +7,8 @@ Measures semantic similarity between sentences using Ollama embeddings and Chrom
 - **Ollama Embeddings**: Uses local `embeddinggemma` model for semantic embeddings
 - **Chroma Vector DB**: Stores and queries embeddings efficiently
 - **Similarity Metrics**: Calculates cosine similarity and distance
-- **Metadata Support**: Supports frequency and group metadata for sentences
+- **Metadata Support**: Supports frequency, group, and subgroup metadata for sentences
+- **Metadata Filtering**: Exclude matches from same group or subgroup when finding closest sentences
 - **Batch Analysis**: Calculates semantic distances for all sentence pairs
 
 ## Prerequisites
@@ -61,11 +62,23 @@ The script will:
   Similarity Percentage: 96.17%
   Cosine Distance: 0.0766
   Distance Percentage: 3.83%
-  Metadata (Sentence 1): {'frequency': 1}
-  Metadata (Sentence 2): {'frequency': 1}
+  Metadata (Sentence 1): {'frequency': 1, 'group': 'Group_A'}
+  Metadata (Sentence 2): {'frequency': 2, 'group': 'Group_A'}
 ```
 
-#### Closest Match for Each Sentence:
+#### Closest Match for Each Sentence (No Filtering):
+```
+'XDKT11T3' ↔ 'XDKG11T3'
+--------------------------------------------------------------------------------
+  Cosine Similarity: 0.9234
+  Similarity Percentage: 96.17%
+  Cosine Distance: 0.0766
+  Distance Percentage: 3.83%
+  Metadata (Sentence 1): {'frequency': 1, 'group': 'Group_A'}
+  Metadata (Sentence 2): {'frequency': 2, 'group': 'Group_A'}
+```
+
+#### Closest Match with Group Exclusion:
 ```
 'XDKT11T3' ↔ 'LDKT11T3'
 --------------------------------------------------------------------------------
@@ -73,8 +86,8 @@ The script will:
   Similarity Percentage: 94.56%
   Cosine Distance: 0.1088
   Distance Percentage: 5.44%
-  Metadata (Sentence 1): {'frequency': 1}
-  Metadata (Sentence 2): {'frequency': 1}
+  Metadata (Sentence 1): {'frequency': 1, 'group': 'Group_A'}
+  Metadata (Sentence 2): {'frequency': 3, 'group': 'Group_B'}
 ```
 
 ## Semantic Distance Metrics
@@ -84,6 +97,61 @@ The script will:
 - **Cosine Distance**: 1 - cosine_similarity (0 = identical, 2 = opposite)
 - **Normalized Distance (0-1)**: (1 - cosine_similarity) / 2 (0 = identical, 1 = opposite)
 - **Distance Percentage**: 100 - similarity_percentage (0-100%)
+
+## Metadata and Filtering
+
+The semantic distance calculator supports metadata filtering to exclude sentences from the same group or subgroup when finding closest matches. This is useful when you want to ensure that semantically similar sentences from different categories are matched.
+
+### Configuration
+
+Filtering behavior is controlled by environment variables in `.env` file:
+- `SAME_GROUP_EXCLUSION=True/False`: Exclude matches from the same group
+- `SAME_SUBGROUP_EXCLUSION=True/False`: Exclude matches from the same subgroup
+
+### Excel File Format with Metadata
+
+The sentences Excel file can include optional Group and Subgroup columns:
+
+| Name | Frequency | Group | Subgroup |
+|------|-----------|-------|----------|
+| Sentence 1 | 1 | A | A1 |
+| Sentence 2 | 1 | A | A2 |
+| Sentence 3 | 1 | B | B1 |
+
+### Using Metadata Filtering
+
+When finding closest matches, you can exclude sentences from the same group or subgroup:
+
+```python
+# Exclude sentences from the same group
+result = calculator.find_closest_sentence("Sentence 1", exclude_same_group=True)
+
+# Exclude sentences from the same subgroup
+result = calculator.find_closest_sentence("Sentence 1", exclude_same_subgroup=True)
+
+# Exclude sentences from both same group and subgroup
+result = calculator.find_closest_sentence("Sentence 1", exclude_same_group=True, exclude_same_subgroup=True)
+```
+
+### Automatic Filtering via Configuration
+
+When using the calculator with ISEC or in batch mode, filtering is automatically applied based on `.env` configuration:
+
+```python
+# In main() function of Distancia_Semantica.py:
+closest_results_filtered = calculator.find_closest_for_all(
+    sentences, 
+    exclude_same_group=Config.SAME_GROUP_EXCLUSION,
+    exclude_same_subgroup=Config.SAME_SUBGROUP_EXCLUSION
+)
+```
+
+### Filtering Behavior
+
+1. **Group Exclusion**: When `exclude_same_group=True`, sentences with the same `group` value are excluded from matches
+2. **Subgroup Exclusion**: When `exclude_same_subgroup=True`, sentences with the same `subgroup` value are excluded from matches
+3. **Combined Exclusion**: Both filters can be applied simultaneously
+4. **Missing Metadata**: If a sentence lacks group/subgroup metadata, it won't be excluded by that filter
 
 ## API
 
@@ -97,6 +165,7 @@ calculator = SemanticDistanceCalculator(
 )
 
 # Load sentences and generate embeddings
+# Metadata should include 'group' and/or 'subgroup' fields for filtering
 calculator.load_sentences(sentences, metadata_list)
 
 # Calculate distance between two sentences
@@ -108,8 +177,26 @@ results = calculator.calculate_all_distances(sentences)
 # Find closest match for a single sentence (excluding itself)
 closest_result = calculator.find_closest_sentence(sentence)
 
+# Find closest match for a single sentence (excluding same group)
+closest_result = calculator.find_closest_sentence(sentence, exclude_same_group=True)
+
+# Find closest match for a single sentence (excluding same subgroup)
+closest_result = calculator.find_closest_sentence(sentence, exclude_same_subgroup=True)
+
+# Find closest match for a single sentence (excluding both same group and subgroup)
+closest_result = calculator.find_closest_sentence(sentence, exclude_same_group=True, exclude_same_subgroup=True)
+
 # Find closest match for all sentences (excluding each from itself)
 closest_results = calculator.find_closest_for_all(sentences)
+
+# Find closest match for all sentences (excluding same group)
+closest_results = calculator.find_closest_for_all(sentences, exclude_same_group=True)
+
+# Find closest match for all sentences (excluding same subgroup)
+closest_results = calculator.find_closest_for_all(sentences, exclude_same_subgroup=True)
+
+# Find closest match for all sentences (excluding both same group and subgroup)
+closest_results = calculator.find_closest_for_all(sentences, exclude_same_group=True, exclude_same_subgroup=True)
 
 # Display results
 calculator.print_result(result)  # Print single result
@@ -119,34 +206,78 @@ calculator.print_batch_results(closest_results)  # Print closest match results
 
 ### Methods
 
-#### `find_closest_sentence(query_sentence)`
+#### `find_closest_sentence(query_sentence, exclude_same_group=False, exclude_same_subgroup=False)`
 Finds the closest semantic match for a single sentence in the collection.
 
 **Args:**
 - `query_sentence` (str): The sentence to find the closest match for
+- `exclude_same_group` (bool): If True, exclude sentences from the same group (requires metadata with 'group' field)
+- `exclude_same_subgroup` (bool): If True, exclude sentences from the same subgroup (requires metadata with 'subgroup' field)
 
 **Returns:**
 - `SemanticDistanceResult`: Result containing metrics and metadata for the closest match
-- `None`: If no matches found (or only the query sentence exists)
+- `None`: If no matches found (or only the query sentence exists, or all matches filtered out)
+
+**Filtering Logic:**
+1. Queries ChromaDB with a `where` clause to exclude documents with matching group/subgroup values
+2. If no matches remain after filtering, returns `None`
+3. If query sentence lacks group/subgroup metadata, that filter is not applied
 
 **Example:**
 ```python
+# Find closest match without filtering
 result = calculator.find_closest_sentence("XDKT11T3")
+
+# Find closest match excluding same group
+result = calculator.find_closest_sentence("XDKT11T3", exclude_same_group=True)
+
+# Find closest match excluding same subgroup
+result = calculator.find_closest_sentence("XDKT11T3", exclude_same_subgroup=True)
+
+# Find closest match excluding both same group and subgroup
+result = calculator.find_closest_sentence("XDKT11T3", exclude_same_group=True, exclude_same_subgroup=True)
+
 calculator.print_result(result)
+
+# Example with configuration-based filtering
+from config import Config
+result = calculator.find_closest_sentence(
+    "XDKT11T3", 
+    exclude_same_group=Config.SAME_GROUP_EXCLUSION,
+    exclude_same_subgroup=Config.SAME_SUBGROUP_EXCLUSION
+)
 ```
 
-#### `find_closest_for_all(sentences)`
+#### `find_closest_for_all(sentences, exclude_same_group=False, exclude_same_subgroup=False)`
 Finds the closest semantic match for each sentence in a list.
 
 **Args:**
 - `sentences` (List[str]): List of sentences to find closest matches for
+- `exclude_same_group` (bool): If True, exclude sentences from the same group (requires metadata with 'group' field)
+- `exclude_same_subgroup` (bool): If True, exclude sentences from the same subgroup (requires metadata with 'subgroup' field)
+
+**Returns:**
+- `List[SemanticDistanceResult]`: List of results for each sentence
+
+**Note:** This method is used in the main function to demonstrate filtering when group metadata is available in the dataset.
 
 **Returns:**
 - `List[SemanticDistanceResult]`: Results for each sentence's closest match
 
 **Example:**
 ```python
+# Find closest matches without filtering
 closest_results = calculator.find_closest_for_all(sentences)
+
+# Find closest matches excluding same group
+closest_results = calculator.find_closest_for_all(sentences, exclude_same_group=True)
+
+# Find closest matches excluding same subgroup
+closest_results = calculator.find_closest_for_all(sentences, exclude_same_subgroup=True)
+
+# Find closest matches excluding both same group and subgroup
+closest_results = calculator.find_closest_for_all(sentences, exclude_same_group=True, exclude_same_subgroup=True)
+
 for result in closest_results:
     calculator.print_result(result)
 ```
@@ -211,7 +342,6 @@ calculator = SemanticDistanceCalculator(
 
 ## Future Enhancements
 
-- Support for 'group' column in metadata
 - Custom similarity thresholds for clustering
 - Export results to CSV
 - Visualization of semantic similarity matrix

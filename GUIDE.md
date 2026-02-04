@@ -1,100 +1,370 @@
-# Levenshtein-Damerau Distance Calculator with Custom Operation Costs
+# ISEC System: Levenshtein-Damerau Distance Calculator with Custom Operation Costs and Metadata Filtering
 
-A Python implementation of the **Levenshtein-Damerau distance** algorithm with full support for **customizable operation costs** for character pairs. Perfect for spell checking, approximate string matching, and linguistic analysis.
+A comprehensive Python system for calculating **Levenshtein-Damerau distance** with customizable operation costs and **metadata filtering**. Includes semantic distance calculation with Ollama embeddings and ISEC (Índice de Sensibilidad al Error Categórico) metric calculation. Perfect for linguistic analysis, semantic similarity, and structural edit cost analysis.
+
+## System Components
+
+### 1. **Levenshtein-Damerau Distance Calculator** (`matriz_costo_caracteres.py`)
+### 2. **Semantic Distance Calculator** (`Distancia_Semantica.py`) 
+### 3. **ISEC Calculator** (`ISEC.py`)
 
 ## Features
 
 ✨ **Core Features:**
+
+### Levenshtein-Damerau Calculator:
 - **Levenshtein-Damerau distance calculation** (supports transposition)
 - **Configurable default costs** for all operation types
 - **Custom character pair costs** for substitution and transposition
 - **Symmetric cost handling** (A→B cost = B→A cost)
 - **Character matrices** showing all pairwise costs
 - **Batch distance calculation** between multiple sentences
+- **Metadata filtering** to exclude comparisons within same group/subgroup
 - **Detailed operation tracking** with cost breakdown
 
-## Installation
+### Semantic Distance Calculator:
+- **Ollama embeddings** for semantic similarity
+- **Chroma vector database** for efficient similarity search
+- **Cosine similarity and distance** metrics
+- **Metadata filtering** for group/subgroup exclusion
+- **Top-k semantic matches** with filtering support
+
+### ISEC Calculator:
+- **Índice de Sensibilidad al Error Categórico** metric calculation
+- **Per-pair ISEC scores** (no aggregated metrics)
+- **Frequency Median Normalized** (FMN) calculation
+- **Complete frequency information** for both source and matched sentences
+- **Excel export** with independent per-pair calculations
+- **Metadata filtering** integrated with semantic matching
+
+## Installation with uv
+
+This project uses [uv](https://github.com/astral-sh/uv), a fast Python package installer and resolver.
 
 ```bash
-# Install required dependencies
-pip install numpy pandas openpyxl
+# Create virtual environment
+uv venv
+
+# Activate virtual environment
+source .venv/bin/activate  # On macOS/Linux
+# .venv\Scripts\activate   # On Windows
+
+# Install dependencies
+uv pip install python-dotenv numpy pandas openpyxl chromadb ollama
 ```
 
-Note: `openpyxl` is needed for reading Excel files. If you only use programmatic API, you can skip it.
+### Prerequisites
+
+1. **Install Ollama** for semantic embeddings:
+   ```bash
+   # On macOS/Linux
+   brew install ollama
+   
+   # Or download from https://ollama.ai
+   ```
+
+2. **Pull the embedding model**:
+   ```bash
+   ollama pull embeddinggemma
+   ```
+
+3. **Start Ollama service**:
+   ```bash
+   ollama serve
+   ```
+
+## Configuration
+
+The system uses a `.env` file for configuration. Key settings include:
+
+### Operation Costs:
+```
+DEFAULT_SUBSTITUTION_COST=1.0
+DEFAULT_INSERTION_COST=1.0
+DEFAULT_DELETION_COST=1.0
+DEFAULT_TRANSPOSITION_COST=1.0
+COST_FACTOR_PENALIZATION=0.1
+```
+
+### File Paths:
+```
+SENTENCES_FILE=Clases.xlsx
+CUSTOM_COSTS_FILE=Custom_cost.xlsx
+ISEC_OUTPUT_FILE=ISEC_Results.xlsx
+```
+
+### Column Names:
+```
+SENTENCES_NAME_COLUMN=Name
+SENTENCES_FREQUENCY_COLUMN=Frequency
+SENTENCES_GROUP_COLUMN=Group
+SENTENCES_SUBGROUP_COLUMN=Subgroup
+```
+
+### Metadata Filtering:
+```
+SAME_GROUP_EXCLUSION=False
+SAME_SUBGROUP_EXCLUSION=False
+```
+
+### Ollama Settings:
+```
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_EMBEDDING_MODEL=embeddinggemma
+```
+
+### ISEC Settings:
+```
+ISEC_SEMANTIC_WEIGHT=0.4
+ISEC_TOP_K_MATCHES=3
+```
 
 ## Quick Start
 
-### Basic Usage
+## Quick Start Examples
+
+### 1. Basic Levenshtein-Damerau Distance
 
 ```python
-from matriz_costo_caracteres import EditCostCalculator
+from matriz_costo_caracteres import EditCostCalculator, load_sentences_from_excel
 
-# Create calculator
-calc = EditCostCalculator(
-    default_substitution_cost=1.0,
-    default_insertion_cost=1.0,
-    default_deletion_cost=1.0,
-    default_transposition_cost=1.0,
-)
+# Create calculator with default costs
+calc = EditCostCalculator()
 
 # Define custom costs for similar character pairs
-custom_costs = {
-    ("A", "S"): 0.5,  # A and S substitution costs 0.5
-    ("E", "I"): 0.5,  # E and I substitution costs 0.5
-}
-
-calc.set_custom_costs(custom_costs, operation="substitution")
+calc.set_custom_substitution_cost("A", "S", 0.5)  # A and S substitution costs 0.5
+calc.set_custom_substitution_cost("E", "I", 0.5)  # E and I substitution costs 0.5
 
 # Setup from sentences
-sentences = ["CASE", "SASE"]
-all_chars = set()
-for s in sentences:
-    all_chars.update(s)
+sentences = ["CASE", "SASE", "CISE"]
+all_chars = set("".join(sentences))
 calc.setup_characters(list(all_chars))
 
 # Calculate distance
 result = calc.calculate_edit_distance("CASE", "SASE")
 print(f"Distance: {result.total_distance}")
-print(f"Operations: {len(result.operations)}")
-print(f"Average cost: {result.average_cost}")
+print(f"Operations: {result.num_operations}")
+print(f"Average cost: {result.average_cost:.4f}")
+print(f"Penalized distance: {result.penalized_distance:.4f}")
+
+# Calculate all pairwise distances
+results = calc.calculate_all_distances(sentences)
+calc.print_batch_results(results)
 ```
 
-### Loading from Excel Files
+### 2. Metadata Filtering with Group/Subgroup Exclusion
 
-The main script (`matriz_costo_caracteres.py`) automatically loads data from Excel files:
+```python
+from matriz_costo_caracteres import EditCostCalculator, load_sentences_from_excel
+
+# Load sentences with metadata (group, subgroup)
+sentences, metadata_list = load_sentences_from_excel(
+    "Clases.xlsx",
+    name_column="Name",
+    frequency_column="Frequency",
+    group_column="Group",      # Optional
+    subgroup_column="Subgroup" # Optional
+)
+
+calc = EditCostCalculator()
+
+# Calculate distances with group exclusion
+results_no_same_group = calc.calculate_distances_with_filtering(
+    sentences,
+    metadata_list,
+    exclude_same_group=True,      # Exclude comparisons within same group
+    exclude_same_subgroup=False   # Keep comparisons within same subgroup
+)
+
+print(f"Total comparisons without filtering: {len(sentences)*(len(sentences)-1)//2}")
+print(f"Comparisons with group exclusion: {len(results_no_same_group)}")
+```
+
+### 3. Semantic Distance with Ollama
+```python
+from Distancia_Semantica import SemanticDistanceCalculator
+
+# Create semantic calculator
+semantic_calc = SemanticDistanceCalculator(
+    ollama_host="http://localhost:11434",
+    embedding_model="embeddinggemma"
+)
+
+# Load sentences and metadata
+sentences = ["The cat sat on the mat", "A feline rested on the rug"]
+metadata_list = [
+    {"frequency": 100, "group": "cats"},
+    {"frequency": 50, "group": "cats"}
+]
+
+semantic_calc.load_sentences(sentences, metadata_list)
+
+# Find closest match excluding same group
+result = semantic_calc.find_closest_sentence(
+    "The cat sat on the mat",
+    exclude_same_group=True  # Will return None since only cats group exists
+)
+
+# Find top k matches with filtering
+top_matches = semantic_calc.find_top_k_semantic_matches(
+    "The cat sat on the mat",
+    k=3,
+    exclude_same_group=False,
+    exclude_same_subgroup=False
+)
+```
+
+### 4. ISEC Calculation with Per-Pair Results
+```python
+from ISEC import ISECCalculator
+
+# Create ISEC calculator
+isec_calc = ISECCalculator(
+    sentences_file="Clases.xlsx",
+    semantic_weight=0.4  # 40% semantic, 60% morphological
+)
+
+# Calculate ISEC for all sentences
+results = isec_calc.calculate_all_isec()
+
+# Print results (shows matched sentence frequency)
+isec_calc.print_batch_results(results)
+
+# Export to Excel (includes Matched_Frequency column)
+isec_calc.export_to_excel(results, "ISEC_Results.xlsx")
+```
+
+### 5. Loading from Excel Files
+
+The main scripts automatically load data from Excel files:
 
 1. **Sentences** from `Clases.xlsx`
-   - Column names: `Name`, `Frequency`
-   - The frequency is loaded but optional for distance calculation
+   - Required columns: `Name`, `Frequency`
+   - Optional columns: `Group`, `Subgroup` (for metadata filtering)
+   - The frequency is used for ISEC calculations and display
 
 2. **Custom costs** from `Custom_cost.xlsx`
-   - Column names: `Character1`, `Character2`, `Cost`
-   - Optionally specify operation type with an `Operation` column
+   - Required columns: `Character1`, `Character2`, `Cost`
+   - Optional column: `Operation` ("substitution" or "transposition")
+   - Defaults to "substitution" if not specified
 
 ```python
 from matriz_costo_caracteres import load_sentences_from_excel, load_custom_costs_from_excel
+from config import Config
 
-# Load sentences and frequencies
-sentences, frequencies = load_sentences_from_excel("Clases.xlsx")
+# Load sentences with metadata
+sentences, metadata_list = load_sentences_from_excel(
+    Config.SENTENCES_FILE,
+    name_column=Config.SENTENCES_NAME_COLUMN,
+    frequency_column=Config.SENTENCES_FREQUENCY_COLUMN,
+    group_column=Config.SENTENCES_GROUP_COLUMN,
+    subgroup_column=Config.SENTENCES_SUBGROUP_COLUMN
+)
 
 # Load custom costs for substitution and transposition
-sub_costs, trans_costs = load_custom_costs_from_excel("Custom_cost.xlsx")
+sub_costs, trans_costs = load_custom_costs_from_excel(
+    Config.CUSTOM_COSTS_FILE,
+    char1_column=Config.COSTS_CHAR1_COLUMN,
+    char2_column=Config.COSTS_CHAR2_COLUMN,
+    cost_column=Config.COSTS_COST_COLUMN,
+    operation_column=Config.COSTS_OPERATION_COLUMN
+)
 
-# Create and configure calculator
-calc = EditCostCalculator()
-calc.set_custom_costs(sub_costs, operation="substitution")
-calc.set_custom_costs(trans_costs, operation="transposition")
+# Create and configure calculator with config defaults
+calc = EditCostCalculator(
+    default_substitution_cost=Config.DEFAULT_SUBSTITUTION_COST,
+    default_insertion_cost=Config.DEFAULT_INSERTION_COST,
+    default_deletion_cost=Config.DEFAULT_DELETION_COST,
+    default_transposition_cost=Config.DEFAULT_TRANSPOSITION_COST,
+)
+
+if sub_costs:
+    calc.set_custom_costs(sub_costs, operation="substitution")
+if trans_costs:
+    calc.set_custom_costs(trans_costs, operation="transposition")
 
 # Setup and calculate
 all_chars = set("".join(sentences))
 calc.setup_characters(list(all_chars))
-results = calc.calculate_all_distances(sentences)
+
+# Calculate all distances (without filtering)
+results_all = calc.calculate_all_distances(sentences)
+
+# Calculate distances with metadata filtering
+if any("group" in metadata for metadata in metadata_list):
+    results_filtered = calc.calculate_distances_with_filtering(
+        sentences,
+        metadata_list,
+        exclude_same_group=Config.SAME_GROUP_EXCLUSION,
+        exclude_same_subgroup=Config.SAME_SUBGROUP_EXCLUSION
+    )
+    print(f"All comparisons: {len(results_all)}")
+    print(f"Filtered comparisons: {len(results_filtered)}")
 ```
 
-Run the main script to process files automatically:
+## Running the Complete System
+
+Run each component separately:
+
 ```bash
+# 1. Levenshtein-Damerau distance calculator
 python matriz_costo_caracteres.py
+
+# 2. Semantic distance calculator (requires Ollama)
+python Distancia_Semantica.py
+
+# 3. ISEC calculator (requires both above)
+python ISEC.py
+
+# 4. Test metadata filtering
+python test_filtering.py
+
+# 5. Test matched frequency functionality
+python test_matched_frequency.py
 ```
+
+## Excel Output Format
+
+The ISEC calculator exports to Excel with the following columns:
+
+| Column | Description |
+|--------|-------------|
+| `Sentence` | Source sentence |
+| `Sentence_Group` | Group of source sentence |
+| `Frequency` | Frequency of source sentence |
+| `FMN` | Frequency Median Normalized |
+| `Match_Rank` | Rank of this match (1 to k) |
+| `Matched_Sentence` | The matched sentence |
+| `Matched_Sentence_Group` | Group of matched sentence |
+| `Matched_Frequency` | Frequency of matched sentence |
+| `Semantic_Distance` | Semantic distance between the pair |
+| `Cost_Distance` | Edit cost distance between the pair |
+| `ISEC_Score` | ISEC score for this specific pair |
+
+**Key Features:**
+- Each row shows independent ISEC calculation for a specific sentence-match pair
+- Both source and matched sentence frequencies are included
+- No aggregated metrics - only per-pair calculations
+- Group information for metadata filtering
+
+## Key Concepts
+
+### Metadata Filtering
+- **Group Exclusion**: When `SAME_GROUP_EXCLUSION=True`, exclude comparisons within same group
+- **Subgroup Exclusion**: When `SAME_SUBGROUP_EXCLUSION=True`, exclude comparisons within same subgroup
+- **Configuration**: Controlled via `.env` file settings
+- **Excel Columns**: Use `Group` and `Subgroup` columns in your sentences file
+
+### ISEC Calculation
+- **Per-Pair Calculation**: Each match gets its own ISEC score
+- **Frequency Display**: Both source and matched sentence frequencies shown
+- **No Aggregation**: No average distances or overall scores
+- **Independent Rows**: Each Excel row contains complete information for one pair
+
+### File Integration
+- **Consistent Metadata**: All three scripts use the same metadata format
+- **Configuration-Driven**: All settings in `.env` file
+- **Excel Compatibility**: Standard Excel file formats
 
 ## API Reference
 

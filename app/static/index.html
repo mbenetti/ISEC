@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISEC Demo Environment</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #e2e8f0;
+            --primary: #38bdf8;
+            --secondary: #818cf8;
+            --accent: #f472b6;
+            --border: #334155;
+            --input-bg: #020617;
+            --glass: rgba(30, 41, 59, 0.7);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) var(--card-bg);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--card-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        /* Top Header */
+        header {
+            height: 80px;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 2rem;
+            flex-shrink: 0;
+            z-index: 20;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            justify-content: space-between;
+            gap: 2rem;
+        }
+
+        .brand {
+            font-size: 1.5rem;
+            font-weight: 600;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            white-space: nowrap;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+            flex: 1;
+            max-width: 800px;
+        }
+
+        .selector-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .selector-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        select {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            background: var(--input-bg);
+            color: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        select:focus {
+            border-color: var(--primary);
+        }
+
+        /* Layout */
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        aside {
+            width: 320px;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        h2 {
+            font-size: 1rem;
+            margin-bottom: 0.8rem;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 0.2rem;
+            color: #cbd5e1;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: var(--input-bg);
+            border-radius: 2px;
+            appearance: none;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: 2px solid var(--card-bg);
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        input[type="number"] {
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            width: 80px;
+            text-align: right;
+            outline: none;
+        }
+
+        input[type="number"]:focus {
+            border-color: var(--primary);
+        }
+
+        .val-display {
+            font-family: monospace;
+            color: var(--secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Main Content */
+        main {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background: radial-gradient(circle at top right, #1e293b 0%, #0f172a 60%);
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            width: 100%;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: rgba(30, 41, 59, 0.5);
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .stat-val {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--secondary);
+            margin: 0.2rem 0;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .freq-edit-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        /* Results Table */
+        .results-container {
+            width: 100%;
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 200px;
+        }
+
+        .table-scroll {
+            overflow: auto;
+            flex: 1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+
+        th {
+            text-align: left;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            font-weight: 600;
+            color: var(--primary);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            position: sticky;
+            top: 0;
+            background-color: var(--card-bg);
+            /* Opaque for sticky */
+            z-index: 5;
+            box-shadow: 0 1px 0 var(--border);
+        }
+
+        td {
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+            color: #e2e8f0;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .bar-container {
+            height: 4px;
+            background: var(--input-bg);
+            border-radius: 2px;
+            width: 80px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 2px;
+        }
+
+        .rank-badge {
+            display: inline-flex;
+            width: 24px;
+            height: 24px;
+            align-items: center;
+            justify-content: center;
+            background: var(--border);
+            border-radius: 50%;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #e2e8f0;
+        }
+
+        .rank-badge.rank-1 {
+            background: #EAB308;
+            color: black;
+        }
+
+        .rank-badge.rank-2 {
+            background: #94A3B8;
+            color: black;
+        }
+
+        .rank-badge.rank-3 {
+            background: #B45309;
+            color: black;
+        }
+
+        .loader {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-bottom-color: var(--primary);
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+            margin: auto;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #64748b;
+            text-align: center;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Animations */
+        .list-move,
+        /* apply transition to moving elements */
+        .list-enter-active,
+        .list-leave-active {
+            transition: all 0.5s ease;
+        }
+
+        .list-enter-from,
+        .list-leave-to {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+
+        /* ensure leaving items are taken out of layout flow so that moving
+           animations can be calculated correctly. */
+        .list-leave-active {
+            position: absolute;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app" style="display: contents;">
+        <!-- Top Header -->
+        <header>
+            <div class="brand">ISEC Demo</div>
+
+            <div class="header-controls">
+                <div class="selector-group">
+                    <div class="selector-label">Select the dataset</div>
+                    <select v-model="selectedCollection" @change="changeCollection">
+                        <option v-for="c in collections" :key="c.name" :value="c.name">
+                            {{ c.name }}
+                        </option>
+                    </select>
+                </div>
+
+                <div class="selector-group" style="flex: 2;">
+                    <div class="selector-label">Select a sentence from dataset</div>
+                    <select v-model="selectedSentence" @change="resetAndCalculate">
+                        <option value="" disabled>Choose a sentence...</option>
+                        <option v-for="s in sentences" :key="s.sentence" :value="s.sentence">
+                            {{ s.sentence }} (Freq: {{ s.frequency }})
+                        </option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="width: 20px;"></div> <!-- Spacer -->
+        </header>
+
+        <div class="app-container">
+            <!-- Sidebar -->
+            <aside>
+                <!-- Global Params -->
+                <div>
+                    <h2>Global Weights</h2>
+                    <div class="control-group">
+                        <label>
+                            Semantic Weight
+                            <span class="val-display">{{ params.semantic_weight }}</span>
+                        </label>
+                        <input type="range" v-model.number="params.semantic_weight" min="0" max="1" step="0.1"
+                            @input="calculate">
+
+                        <label>
+                            Penalization (k)
+                            <span class="val-display">{{ params.cost_factor }}</span>
+                        </label>
+                        <input type="range" v-model.number="params.cost_factor" min="0" max="2" step="0.1"
+                            @input="calculate">
+                    </div>
+                </div>
+
+                <!-- Costs -->
+                <div>
+                    <h2>Operation Costs</h2>
+                    <div class="control-group">
+                        <label>
+                            Substitution
+                            <span class="val-display">{{ params.substitution }}</span>
+                        </label>
+                        <input type="range" v-model.number="params.substitution" min="0.1" max="5" step="0.1"
+                            @input="calculate">
+
+                        <label>
+                            Insertion
+                            <span class="val-display">{{ params.insertion }}</span>
+                        </label>
+                        <input type="range" v-model.number="params.insertion" min="0.1" max="5" step="0.1"
+                            @input="calculate">
+
+                        <label>
+                            Deletion
+                            <span class="val-display">{{ params.deletion }}</span>
+                        </label>
+                        <input type="range" v-model.number="params.deletion" min="0.1" max="5" step="0.1"
+                            @input="calculate">
+
+                        <label>
+                            Transposition
+                            <span class="val-display">{{ params.transposition }}</span>
+                        </label>
+                        <input type="range" v-model.number="params.transposition" min="0.1" max="5" step="0.1"
+                            @input="calculate">
+                    </div>
+                </div>
+
+                <div>
+                    <h2>Settings</h2>
+                    <div class="control-group">
+                        <label>
+                            Top Matches (k)
+                            <span class="val-display">{{ params.top_k }}</span>
+                        </label>
+                        <input type="range" v-model.number="params.top_k" min="1" max="20" step="1" @input="calculate">
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main>
+                <!-- Loading -->
+                <div v-if="loading" style="flex: 1; display: flex; align-items: center; justify-content: center;">
+                    <div class="loader"></div>
+                </div>
+
+                <!-- Results -->
+                <template v-else-if="result">
+                    <!-- Stats -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Frequency</div>
+                            <div class="stat-val">{{ result.frequency }}</div>
+                            <div class="freq-edit-container">
+                                <label style="font-size: 0.7rem; color: #94a3b8;">Override for calc:</label>
+                                <input type="number" v-model.lazy="overrideFreq" @change="calculate" placeholder="Auto">
+                                <input type="range" v-model.number="overrideFreq" min="1" max="1000" step="1"
+                                    @input="calculate" style="width: 80%">
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Freq Med Norm</div>
+                            <div class="stat-val">{{ result.fmn.toFixed(2) }}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Best ISEC Score</div>
+                            <div class="stat-val" style="color: var(--accent)">
+                                {{ sortedMatches[0] ? sortedMatches[0].isec_score.toFixed(3) : '-' }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="results-container">
+                        <div class="table-scroll">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px; text-align: center;">#</th>
+                                        <th>Matched Sentence</th>
+                                        <th>Group</th>
+                                        <th>Sem Dist</th>
+                                        <th>Cost Dist</th>
+                                        <th>ISEC</th>
+                                    </tr>
+                                </thead>
+                                <transition-group tag="tbody" name="list">
+                                    <tr v-for="(match, index) in sortedMatches" :key="match.sentence">
+                                        <td style="text-align: center">
+                                            <span class="rank-badge" :class="'rank-' + (index + 1)">{{ index + 1
+                                                }}</span>
+                                        </td>
+                                        <td>
+                                            <div style="font-weight: 500; font-size: 0.95rem;">{{ match.sentence }}
+                                            </div>
+                                        </td>
+                                        <td style="color: #94a3b8; font-size: 0.85rem;">
+                                            {{ match.group }}
+                                        </td>
+                                        <td>
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <span style="font-family: monospace;">{{
+                                                    match.semantic_distance.toFixed(3) }}</span>
+                                                <div class="bar-container">
+                                                    <div class="bar-fill"
+                                                        :style="{width: (match.semantic_distance * 100) + '%', background: '#38bdf8'}">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <span style="font-family: monospace;">{{ match.cost_distance.toFixed(2)
+                                                    }}</span>
+                                                <div class="bar-container">
+                                                    <div class="bar-fill"
+                                                        :style="{width: Math.min((match.cost_distance / 10) * 100, 100) + '%', background: '#f472b6'}">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div
+                                                style="font-weight: 600; color: var(--secondary); font-family: monospace; font-size: 1rem;">
+                                                {{ match.isec_score.toFixed(3) }}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </transition-group>
+                            </table>
+                        </div>
+                    </div>
+                </template>
+
+                <div v-else class="empty-state">
+                    <div class="empty-icon">👈</div>
+                    <p>Parameters on the left</p>
+                    <p style="margin-top: 0.5rem; color: var(--primary);">Select a dataset and sentence above</p>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue
+
+        createApp({
+            setup() {
+                const collections = ref([])
+                const sentences = ref([])
+
+                const selectedCollection = ref("Short Categories")
+                const selectedSentence = ref("")
+
+                const overrideFreq = ref(null)
+
+                const params = ref({
+                    semantic_weight: 0.2,
+                    cost_factor: 0.2,
+                    substitution: 1.1,
+                    insertion: 1.3,
+                    deletion: 1.3,
+                    transposition: 0.5,
+                    top_k: 3
+                })
+                const result = ref(null)
+                const loading = ref(false)
+
+                // Load initial data
+                onMounted(async () => {
+                    // Fetch config
+                    const configRes = await fetch('/api/config')
+                    const config = await configRes.json()
+                    params.value = { ...params.value, ...config }
+
+                    // Fetch Collections
+                    const colRes = await fetch('/api/collections')
+                    collections.value = await colRes.json()
+
+                    // Fetch initial sentences (backend defaults to Short Categories)
+                    await fetchSentences()
+                })
+
+                const fetchSentences = async () => {
+                    const sRes = await fetch('/api/sentences')
+                    sentences.value = await sRes.json()
+                }
+
+                const changeCollection = async () => {
+                    loading.value = true
+                    selectedSentence.value = ""
+                    result.value = null
+
+                    try {
+                        await fetch('/api/collection', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ collection_name: selectedCollection.value })
+                        })
+                        await fetchSentences()
+                    } catch (e) {
+                        console.error(e)
+                    } finally {
+                        loading.value = false
+                    }
+                }
+
+                const resetAndCalculate = () => {
+                    const s = sentences.value.find(x => x.sentence === selectedSentence.value)
+                    if (s) {
+                        overrideFreq.value = s.frequency
+                    }
+                    calculate()
+                }
+
+                const calculate = async () => {
+                    if (!selectedSentence.value) return
+
+                    loading.value = false
+                    if (!result.value || result.value.sentence !== selectedSentence.value) {
+                        // loading.value = true 
+                    }
+
+                    try {
+                        const res = await fetch('/api/calculate', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                sentence: selectedSentence.value,
+                                params: params.value,
+                                override_frequency: overrideFreq.value
+                            })
+                        })
+                        result.value = await res.json()
+                    } catch (e) {
+                        console.error(e)
+                    } finally {
+                        loading.value = false
+                    }
+                }
+
+                const sortedMatches = computed(() => {
+                    if (!result.value || !result.value.top_matches) return []
+                    // console.log("Recalculating sorted matches...")
+                    return [...result.value.top_matches].sort((a, b) => b.isec_score - a.isec_score)
+                })
+
+                return {
+                    collections,
+                    sentences,
+                    selectedCollection,
+                    selectedSentence,
+                    params,
+                    result,
+                    loading,
+                    overrideFreq,
+                    calculate,
+                    resetAndCalculate,
+                    changeCollection,
+                    sortedMatches
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+
+</html>

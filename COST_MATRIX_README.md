@@ -1,4 +1,4 @@
-# ISEC - Levenshtein-Damerau Distance Calculator with Custom Operation Costs
+# ISEC - Levenshtein-Damerau Distance Calculator with Custom Operation Costs and Metadata Filtering
 
 This project implements a Levenshtein-Damerau edit distance calculator that supports custom costs for character pair substitutions and transpositions. Load sentences and custom costs from Excel files, and get detailed operation breakdowns with individual and average costs.
 
@@ -11,6 +11,7 @@ This project implements a Levenshtein-Damerau edit distance calculator that supp
 - **Excel Integration**: Load sentences and custom costs from Excel files
 - **Detailed Operation Tracking**: See individual operations, character pairs involved, and costs
 - **Batch Analysis**: Calculate distances for all sentence pairs with statistics
+- **Metadata Filtering**: Exclude comparisons within same group or subgroup when calculating distances
 - **Configuration Management**: Externalized configuration via `.env` file for easy adjustments
 - **Symmetric Cost Matrices**: Cost matrices respect symmetry (cost(A,B) = cost(B,A))
 
@@ -33,39 +34,44 @@ CUSTOM_COSTS_FILE=Custom_cost.xlsx
 
 SENTENCES_NAME_COLUMN=Name
 SENTENCES_FREQUENCY_COLUMN=Frequency
+SENTENCES_GROUP_COLUMN=Group
+SENTENCES_SUBGROUP_COLUMN=Subgroup
 
 COSTS_CHAR1_COLUMN=Character1
 COSTS_CHAR2_COLUMN=Character2
 COSTS_COST_COLUMN=Cost
 COSTS_OPERATION_COLUMN=Operation
+
+SAME_GROUP_EXCLUSION=False
+SAME_SUBGROUP_EXCLUSION=False
 ```
 
 ### Penalized Distance Metric
 
-The calculator provides a **Penalized Distance** metric that combines average cost with insertion/deletion penalties:
+The calculator provides a **Penalized Distance** metric that combines average cost with edit operation penalties:
 
-$$\text{penalized\_distance} = \text{average\_cost} + (k \times \text{cost\_insertions\_deletions})$$
+$$\text{penalized\_distance} = \text{average\_cost} + (k \times \text{sum\_edit\_costs})$$
 
 Where:
 - `average_cost` = total_cost / number_of_operations (average per-operation cost)
 - `k` = OPERATION_COST_FACTOR (default 0.1)
-- `cost_insertions_deletions` = sum of insertion and deletion operation costs (excluding substitutions and transpositions)
+- `sum_edit_costs` = sum of insertion, deletion, and substitution operation costs (excluding transpositions)
 
 **Example**: For distance between "XDKT11T3" and "XDKG11T3":
 - Total Cost: 0.5 (1 substitution of cost 0.5)
 - Num Operations: 1
 - Average Cost: 0.5 / 1 = 0.5
-- Sum Insertions/Deletions: 0 (no insertions or deletions)
-- Penalized Distance: 0.5 + (0.1 × 0) = 0.5
+- Sum Edit Costs: 0.5 (substitution cost)
+- Penalized Distance: 0.5 + (0.1 × 0.5) = 0.55
 
 **Example with insertions/deletions**: For "ABC" vs "AXBC":
 - Total Cost: 1.0 (1 insertion of cost 1.0)
 - Num Operations: 1
 - Average Cost: 1.0 / 1 = 1.0
-- Sum Insertions/Deletions: 1.0
+- Sum Edit Costs: 1.0 (insertion cost)
 - Penalized Distance: 1.0 + (0.1 × 1.0) = 1.1
 
-This metric penalizes structural changes (insertions/deletions) more heavily than substitutions, useful for analyzing character-level transformations.
+This metric penalizes all edit operations (insertions, deletions, and substitutions), useful for analyzing character-level transformations. Custom substitution costs from `Costo_Personalizado.xlsx` are included in the penalization.
 
 ### Modifying Costs
 
@@ -97,6 +103,74 @@ This project uses [uv](https://github.com/astral-sh/uv), a fast Python package i
    ```bash
    uv --version
    ```
+
+### Metadata Filtering
+
+The calculator supports metadata-based filtering to exclude comparisons within the same group or subgroup. This is useful when you want to analyze distances only between sentences from different categories.
+
+#### Filtering Configuration
+
+Set these in your `.env` file:
+- `SAME_GROUP_EXCLUSION=True/False`: When True, excludes comparisons between sentences in the same group
+- `SAME_SUBGROUP_EXCLUSION=True/False`: When True, excludes comparisons between sentences in the same subgroup
+
+#### Filtering Methods
+
+```python
+# Calculate distances with group exclusion
+results_no_same_group = calculator.calculate_distances_with_filtering(
+    sentences,
+    metadata_list,
+    exclude_same_group=True,
+    exclude_same_subgroup=False,
+)
+
+# Calculate distances with subgroup exclusion
+results_no_same_subgroup = calculator.calculate_distances_with_filtering(
+    sentences,
+    metadata_list,
+    exclude_same_group=False,
+    exclude_same_subgroup=True,
+)
+
+# Calculate distances with both group and subgroup exclusion
+results_no_same_group_subgroup = calculator.calculate_distances_with_filtering(
+    sentences,
+    metadata_list,
+    exclude_same_group=True,
+    exclude_same_subgroup=True,
+)
+```
+
+#### Example Output with Filtering
+
+```
+Metadata Filtering Demonstration
+================================================================================
+
+Metadata available:
+  - Group data: YES
+  - Same Group Exclusion (from config): True
+  - Subgroup data: YES
+  - Same Subgroup Exclusion (from config): False
+
+Calculating distances with metadata filtering...
+
+1. All comparisons (no filtering):
+   Total comparisons: 6
+
+2. Comparisons excluding same group:
+   Total comparisons: 4
+   Excluded comparisons: 2
+
+3. Comparisons excluding same subgroup:
+   Total comparisons: 5
+   Excluded comparisons: 1
+
+4. Comparisons excluding same group AND same subgroup:
+   Total comparisons: 3
+   Excluded comparisons: 3
+```
 
 ### Quick Setup
 
@@ -134,28 +208,37 @@ python matriz_costo_caracteres.py
 
 The script will:
 1. Display the current configuration from `.env`
-2. Load sentences from `Clases.xlsx`
+2. Load sentences and metadata (group, subgroup) from `Clases.xlsx`
 3. Load custom costs from `Custom_cost.xlsx`
 4. Display substitution and transposition cost matrices
 5. Calculate Levenshtein-Damerau distances for all sentence pairs
 6. Show detailed operation breakdowns and statistics
+7. Demonstrate metadata filtering functionality when group/subgroup data is available
 
 ## Excel File Formats
 
 ### Clases.xlsx (Sentences File)
 
-The sentences file should have at least two columns:
+The sentences file should have at least two columns, with optional group and subgroup columns for metadata filtering:
 
-| Name | Frequency |
-|------|-----------|
-| XDKT11T3 | 1 |
-| XDKG11T3 | 1 |
-| LDKT11T3 | 1 |
+| Name | Frequency | Group | Subgroup |
+|------|-----------|-------|----------|
+| XDKT11T3 | 1 | A | A1 |
+| XDKG11T3 | 1 | A | A2 |
+| LDKT11T3 | 1 | B | B1 |
 
 - **Name**: The sentence or string to analyze
-- **Frequency**: How many times this sentence appears (used for statistics)
+- **Frequency**: How many times this sentence appears (used for statistics and ISEC calculations)
+- **Group**: Optional group identifier for filtering (used with `exclude_same_group` parameter)
+- **Subgroup**: Optional subgroup identifier for filtering (used with `exclude_same_subgroup` parameter)
 
-Column names are configurable via `.env` file (default: "Name" and "Frequency").
+**Note on Metadata Filtering:**
+- When `SAME_GROUP_EXCLUSION=True` in `.env`, comparisons between sentences with the same `Group` value are excluded
+- When `SAME_SUBGROUP_EXCLUSION=True` in `.env`, comparisons between sentences with the same `Subgroup` value are excluded
+- Both filters can be applied simultaneously
+- If a sentence lacks group/subgroup metadata, it won't be excluded by that filter
+
+Column names are configurable via `.env` file (default: "Name", "Frequency", "Group", "Subgroup").
 
 ### Custom_cost.xlsx (Custom Costs File)
 
@@ -180,10 +263,12 @@ Column names are configurable via `.env` file (see Configuration section).
 ISEC/
 ├── pyproject.toml                  # Project configuration
 ├── README.md                       # This file
-├── .env                           # Configuration file (externalized costs)
+├── .env                           # Configuration file (externalized costs and filtering)
 ├── config.py                      # Configuration loader
-├── matriz_costo_caracteres.py     # Main implementation
+├── matriz_costo_caracteres.py     # Main implementation with metadata filtering
 ├── test_basic.py                  # Basic tests
+├── test_filtering.py              # Metadata filtering tests
+├── test_matched_frequency.py      # Frequency display tests
 ├── Clases.xlsx                    # Sentences to analyze (optional)
 ├── Custom_cost.xlsx               # Custom character pair costs (optional)
 └── .venv/                        # Virtual environment
@@ -195,6 +280,26 @@ ISEC/
 - **numpy** (>=1.24.0): Numerical computing for matrix operations
 - **pandas** (>=2.0.0): Data manipulation and cost matrix representation
 - **openpyxl** (>=3.0.0): Read Excel files
+
+## Related Documentation
+
+- [ISEC_README.md](ISEC_README.md) - Complete ISEC calculator documentation with per-pair calculations
+- [SEMANTIC_DISTANCE_README.md](SEMANTIC_DISTANCE_README.md) - Semantic distance calculator with metadata filtering
+- [GUIDE.md](GUIDE.md) - Comprehensive user guide
+
+## Testing Metadata Filtering
+
+Test scripts are available to verify metadata filtering functionality:
+```bash
+# Test basic filtering functionality
+python test_filtering.py
+
+# Test matched frequency display
+python test_matched_frequency.py
+
+# Test parameter sensitivity with filtering
+python test_parameter_sensitivity.py
+```
 
 ### Development Dependencies
 

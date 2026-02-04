@@ -1,0 +1,107 @@
+==========================================================================================
+ISEC - Índice de Sensibilidad al Error Categórico Calculator
+==========================================================================================
+
+
+============================================================
+Configuration
+============================================================
+  Default Substitution Cost: 1.1
+  Default Insertion Cost: 1.3
+  Default Deletion Cost: 1.3
+  Default Transposition Cost: 0.5
+
+  Sentences File: Sentences.xlsx
+  Custom Costs File: Costo_Personalizado.xlsx
+  Same Group Exclusion: True
+  Same Subgroup Exclusion: True
+
+  Frequency Log Base: 10.0
+  Frequency Scaling Enabled: True
+============================================================
+
+✓ Loaded 3 sentences from Sentences.xlsx
+✓ Cost calculator initialized
+Initialized SemanticDistanceCalculator
+  Ollama Host: http://localhost:11434
+  Embedding Model: embeddinggemma
+  Collection: isec_sentences
+
+Generating embeddings for 3 sentences...
+  ✓ Embedded sentence 1/3: Limpia tapicería en espuma Binner...
+  ✓ Embedded sentence 2/3: Limpia tapicería y alfombras Binner...
+  ✓ Embedded sentence 3/3: Limpiador Dr. Beckmann alfombras 2 en 1 poder oxi ...
+
+Loaded 3 embeddings into Chroma collection
+✓ Semantic calculator initialized
+
+ISEC Configuration:
+  Semantic Weight: 20.0%
+  Morphologic Weight: 80.0%
+  Top K Matches: 1
+  Output File: ISEC_Results.xlsx
+
+Calculating ISEC metrics...
+
+====================================================================================================
+ISEC (Índice de Sensibilidad al Error Categórico) Analysis
+====================================================================================================
+
+'Limpia tapicería en espuma Binner'
+------------------------------------------------------------------------------------------------------------------------
+  Frequency: 100
+  Frequency Median Normalized (FMN): 1.1772
+  Group: N/A
+
+  Top 1 Semantic Matches with ISEC Scores:
+    1. 'Limpia tapicería y alfombras Binner'
+       Semantic Distance: 0.0751  |  Cost Distance: 3.3289  |  ISEC: 0.4396  |  Group: N/A  |  Frequency: 50
+
+  Weights: semantic=20.0%, morphologic=80.0%
+
+'Limpia tapicería y alfombras Binner'
+------------------------------------------------------------------------------------------------------------------------
+  Frequency: 50
+  Frequency Median Normalized (FMN): 1.0000
+  Group: N/A
+
+  Top 1 Semantic Matches with ISEC Scores:
+    1. 'Limpia tapicería en espuma Binner'
+       Semantic Distance: 0.0751  |  Cost Distance: 3.3289  |  ISEC: 0.3734  |  Group: N/A  |  Frequency: 100
+
+  Weights: semantic=20.0%, morphologic=80.0%
+
+'Limpiador Dr. Beckmann alfombras 2 en 1 poder oxi x 650 ml'
+------------------------------------------------------------------------------------------------------------------------
+  Frequency: 10
+  Frequency Median Normalized (FMN): 0.5886
+  Group: N/A
+
+  Top 1 Semantic Matches with ISEC Scores:
+    1. 'Limpia tapicería y alfombras Binner'
+       Semantic Distance: 0.2454  |  Cost Distance: 9.6143  |  ISEC: 0.0760  |  Group: N/A  |  Frequency: 50
+
+  Weights: semantic=20.0%, morphologic=80.0%
+
+====================================================================================================
+Summary Statistics
+====================================================================================================
+
+  Total sentences analyzed: 3
+  Total match pairs analyzed: 3
+  FMN (Frequency Median Normalized):
+    Average: 0.9219
+    Min: 0.5886
+    Max: 1.1772
+  ISEC Scores (per match pair):
+    Average: 0.2963
+    Min: 0.0760
+    Max: 0.4396
+  ISEC Scores (per match pair):
+    Average: 0.2963
+    Min: 0.0760
+    Max: 0.4396
+    Median: 0.3734
+====================================================================================================
+
+✓ Results exported to ISEC_Results.xlsx (3 rows)
