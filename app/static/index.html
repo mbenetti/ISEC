@@ -517,7 +517,7 @@
                 <!-- Results -->
                 <template v-else-if="result">
                     <!-- Stats -->
-                    <div class="stats-grid">
+                    <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
                         <div class="stat-card">
                             <div class="stat-label">Frequency</div>
                             <div class="stat-val">{{ result.frequency }}</div>
@@ -527,6 +527,10 @@
                                 <input type="range" v-model.number="overrideFreq" min="1" max="1000" step="1"
                                     @input="calculate" style="width: 80%">
                             </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Group</div>
+                            <div class="stat-val" :title="result.group">{{ result.group || 'N/A' }}</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Freq Med Norm</div>

@@ -68,7 +68,7 @@ class ISECCalculator:
             semantic_weight: Weight for semantic distance (0.0-1.0). Morphologic weight = 1.0 - semantic_weight
             source_filter: Optional source name (e.g. "Clases.xlsx") to restrict semantic search
         """
-        self.sentences_file = sentences_file or Config.SENTENCES_FILE
+        self.sentences_file = sentences_file if sentences_file is not None else Config.SENTENCES_FILE
         self.custom_costs_file = custom_costs_file or Config.CUSTOM_COSTS_FILE
         self.ollama_host = ollama_host or Config.OLLAMA_HOST
         self.embedding_model = embedding_model or Config.OLLAMA_EMBEDDING_MODEL
@@ -83,12 +83,23 @@ class ISECCalculator:
         # Load sentences and frequencies
         self.sentences = []
         self.frequencies = {}
-        self._load_sentences()
-
+        self.metadata_map = {} # Store full metadata keyed by sentence
+        
         # Initialize calculators
         self.cost_calculator = None
         self.semantic_calculator = None
         self._initialize_calculators()
+
+        # Only attempt automatic load if not explicitly disabled
+        if sentences_file is not False:
+            try:
+                self._load_sentences()
+                # Re-initialize with actual data if loaded
+                self._initialize_calculators()
+            except FileNotFoundError:
+                if sentences_file:
+                    raise
+                print("Warning: Default sentences file not found. Calculator initialized without data.")
 
     def _load_sentences(self) -> None:
         """Load sentences and frequencies from Excel file."""
@@ -154,15 +165,25 @@ class ISECCalculator:
             collection_name="isec_sentences",
         )
 
-        # Load sentences into semantic calculator with full metadata including group information
-        _, metadata_list = load_sentences_semantic(
-            self.sentences_file,
-            name_column=Config.SENTENCES_NAME_COLUMN,
-            frequency_column=Config.SENTENCES_FREQUENCY_COLUMN,
-            group_column=Config.SENTENCES_GROUP_COLUMN,
-            subgroup_column=Config.SENTENCES_SUBGROUP_COLUMN,
-        )
-        self.semantic_calculator.load_sentences(self.sentences, metadata_list)
+        # Load sentences into semantic calculator only if a file is provided
+        if self.sentences_file is not False:
+            try:
+                _, metadata_list = load_sentences_semantic(
+                    self.sentences_file,
+                    name_column=Config.SENTENCES_NAME_COLUMN,
+                    frequency_column=Config.SENTENCES_FREQUENCY_COLUMN,
+                    group_column=Config.SENTENCES_GROUP_COLUMN,
+                    subgroup_column=Config.SENTENCES_SUBGROUP_COLUMN,
+                )
+                self.semantic_calculator.load_sentences(self.sentences, metadata_list)
+                print(f"✓ Semantic calculator initialized with {len(self.sentences)} sentences from {self.sentences_file}")
+            except Exception as e:
+                # If it's a default file missing, we already warned in __init__
+                if self.sentences_file and not isinstance(self.sentences_file, bool):
+                     print(f"Warning: Could not load semantic data from {self.sentences_file}: {e}")
+                pass
+        else:
+             print(f"✓ Semantic calculator initialized (empty dataset)")
         print(f"✓ Semantic calculator initialized")
 
     def calculate_frequency_median_normalized(self) -> float:
@@ -233,13 +254,17 @@ class ISECCalculator:
         Returns:
             List of (sentence, normalized_distance, metadata) tuples sorted by distance (ascending)
         """
-        # Use the semantic calculator's new find_top_k_semantic_matches method with group exclusion
+        # Get query metadata from our localized map
+        query_meta = self.metadata_map.get(query_sentence, {})
+        
+        # Use the semantic calculator's method with localized metadata
         return self.semantic_calculator.find_top_k_semantic_matches(
             query_sentence,
             k=k,
             exclude_same_group=Config.SAME_GROUP_EXCLUSION,
             exclude_same_subgroup=Config.SAME_SUBGROUP_EXCLUSION,
-            source_filter=self.source_filter, # Pass the filter!
+            source_filter=self.source_filter,
+            query_metadata=query_meta,
         )
 
     def calculate_isec(self, sentence: str, frequency: int) -> ISECResult:

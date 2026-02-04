@@ -36,11 +36,9 @@ all_sentences_data = [] # List of dicts {name, frequency, source, group}
 all_chars = [] # List of all unique characters across all datasets
 active_collection = None # Current source filename
 
-COLLECTIONS = {
-    "Short Categories": "Clases.xlsx",
-    "Long Sentences": "Sentences.xlsx",
-    "Provincias": "provincias_small.xlsx"
-}
+# Dynamic directory for data files
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+collections_map = {} # {friendly_name: filename}
 
 class CalculationRequest(BaseModel):
     sentence: str
@@ -60,53 +58,63 @@ class ConfigResponse(BaseModel):
     top_k: int
 
 def load_data():
-    """Load and merge data from all files into global structures"""
-    global all_sentences_data, all_chars
+    """Load and merge data from all files in DATA_DIR into global structures"""
+    global all_sentences_data, all_chars, collections_map
     
-    root_dir = os.path.dirname(os.path.dirname(__file__))
+    import glob
     
     all_sentences_data = []
+    collections_map = {}
     
-    for friendly_name, fname in COLLECTIONS.items():
-        fpath = os.path.join(root_dir, fname)
-        if os.path.exists(fpath):
-            try:
-                df = pd.read_excel(fpath)
-                # Determine columns
-                col_name = Config.SENTENCES_NAME_COLUMN if Config.SENTENCES_NAME_COLUMN in df.columns else df.columns[0]
-                col_freq = Config.SENTENCES_FREQUENCY_COLUMN if Config.SENTENCES_FREQUENCY_COLUMN in df.columns else (df.columns[1] if len(df.columns) > 1 else None)
-                col_group = Config.SENTENCES_GROUP_COLUMN if Config.SENTENCES_GROUP_COLUMN in df.columns else None
+    if not os.path.exists(DATA_DIR):
+        print(f"Warning: Data directory {DATA_DIR} not found.")
+        return
+
+    excel_files = sorted(glob.glob(os.path.join(DATA_DIR, "*.xlsx")))
+    
+    for fpath in excel_files:
+        fname = os.path.basename(fpath)
+        # Use filename without extension as friendly name
+        friendly_name = os.path.splitext(fname)[0].replace("_", " ").title()
+        collections_map[friendly_name] = fname
+        
+        try:
+            df = pd.read_excel(fpath)
+            # Determine columns
+            col_name = Config.SENTENCES_NAME_COLUMN if Config.SENTENCES_NAME_COLUMN in df.columns else df.columns[0]
+            col_freq = Config.SENTENCES_FREQUENCY_COLUMN if Config.SENTENCES_FREQUENCY_COLUMN in df.columns else (df.columns[1] if len(df.columns) > 1 else None)
+            col_group = Config.SENTENCES_GROUP_COLUMN if Config.SENTENCES_GROUP_COLUMN in df.columns else None
+            
+            for _, row in df.iterrows():
+                name = str(row[col_name])
+                freq = 1
+                if col_freq:
+                    try:
+                        freq = int(row[col_freq])
+                    except:
+                        pass
                 
-                for _, row in df.iterrows():
-                    name = str(row[col_name])
-                    freq = 1
-                    if col_freq:
-                        try:
-                            freq = int(row[col_freq])
-                        except:
-                            pass
-                    
-                    group_val = None
-                    if col_group:
-                        val = row[col_group]
-                        if pd.notna(val):
-                            group_val = str(val)
-                    
-                    all_sentences_data.append({
-                        "sentence": name,
-                        "frequency": freq,
-                        "source": fname, # This is our filter key!
-                        "group": group_val
-                    })
-            except Exception as e:
-                print(f"Error loading {fname}: {e}")
+                group_val = None
+                if col_group:
+                    val = row[col_group]
+                    if pd.notna(val):
+                        group_val = str(val)
+                
+                all_sentences_data.append({
+                    "sentence": name,
+                    "frequency": freq,
+                    "source": fname, # Use filename as source key
+                    "group": group_val
+                })
+        except Exception as e:
+            print(f"Error loading {fname}: {e}")
                 
     # Unique characters for cost matrix
     unique_chars = set()
     for d in all_sentences_data:
         unique_chars.update(d["sentence"])
     all_chars = sorted(list(unique_chars))
-    print(f"Loaded {len(all_sentences_data)} total sentences and {len(all_chars)} unique characters.")
+    print(f"Loaded {len(all_sentences_data)} total sentences from {len(collections_map)} files and {len(all_chars)} unique characters.")
 
 def init_global_calculator():
     """Initialize the calculator ONCE with ALL data."""
@@ -114,7 +122,7 @@ def init_global_calculator():
     
     print("Initializing global ISECCalculator...")
     # Initialize empty, we will load manually
-    global_calculator = ISECCalculator()
+    global_calculator = ISECCalculator(sentences_file=False)
     
     # 1. Setup Cost Calculator with ALL characters
     global_calculator.cost_calculator.setup_characters(all_chars)
@@ -133,10 +141,8 @@ def init_global_calculator():
             m["group"] = d["group"]
         metadata.append(m)
     
-    # Clearing logic handled inside load_sentences? No, normally it appends.
-    # But since we run this once at startup, it's fine.
-    # Note: `ISECCalculator` creates a new collection "isec_sentences"
-    # We should probably force clear it once here to be safe across restarts?
+    # Clearing logic: ISECCalculator creates a new collection "isec_sentences"
+    # We force clear it once here to be safe across restarts.
     try:
         global_calculator.semantic_calculator.chroma_client.delete_collection("isec_sentences")
     except:
@@ -155,21 +161,37 @@ def set_active_collection(source_filter: str):
     # Filter valid sentences for UI and internal cost calculations
     filtered_data = [d for d in all_sentences_data if d["source"] == source_filter]
     
-    # Update calculator's working set (for list iteration, etc)
+    # Update calculator's working set
     global_calculator.sentences = [d["sentence"] for d in filtered_data]
     global_calculator.frequencies = {d["sentence"]: d["frequency"] for d in filtered_data}
     
-    # Update the semantic filter!
+    # Store localized metadata for group exclusion and UI
+    global_calculator.metadata_map = {
+        d["sentence"]: {
+            "frequency": d["frequency"],
+            "group": d["group"]
+        } for d in filtered_data
+    }
+    
+    # Update the semantic filter
     global_calculator.source_filter = source_filter
     
 @app.on_event("startup")
 async def startup_event():
     load_data()
     init_global_calculator()
-    # Default to Short Categories
-    set_active_collection(COLLECTIONS["Short Categories"])
+    
+    # Default to first available collection if exists
+    if collections_map:
+        first_friendly = list(collections_map.keys())[0]
+        # Prefer "Short Categories" or "Clases" if available
+        for target in ["Short Categories", "Clases"]:
+            if target in collections_map:
+                first_friendly = target
+                break
+        set_active_collection(collections_map[first_friendly])
 
-@app.get("/api/config", response_model=ConfigResponse)
+@app.get("/api/config", response_model= ConfigResponse)
 async def get_config():
     """Get current configuration"""
     return {
@@ -184,14 +206,14 @@ async def get_config():
 
 @app.get("/api/collections")
 async def get_collections():
-    return [{"name": k, "file": v} for k, v in COLLECTIONS.items()]
+    return [{"name": k, "file": v} for k, v in collections_map.items()]
 
 @app.post("/api/collection")
 async def set_collection_endpoint(req: CollectionRequest):
-    if req.collection_name not in COLLECTIONS:
+    if req.collection_name not in collections_map:
         raise HTTPException(status_code=400, detail="Invalid collection")
     
-    target_file = COLLECTIONS[req.collection_name]
+    target_file = collections_map[req.collection_name]
     set_active_collection(target_file)
     return {"status": "ok", "active": req.collection_name}
 
@@ -269,6 +291,7 @@ async def calculate(req: CalculationRequest):
         "sentence": req.sentence,
         "frequency": result.frequency,
         "fmn": result.frequency_median_normalized,
+        "group": global_calculator.metadata_map.get(req.sentence, {}).get("group", "N/A"),
         "top_matches": top_matches
     }
 

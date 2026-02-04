@@ -270,6 +270,7 @@ class SemanticDistanceCalculator:
         exclude_same_group: bool = False,
         exclude_same_subgroup: bool = False,
         source_filter: str = None,
+        query_metadata: Dict = None,
     ) -> List[Tuple[str, float, Dict]]:
         """
         Find top k closest sentences by semantic distance.
@@ -280,6 +281,7 @@ class SemanticDistanceCalculator:
             exclude_same_group: Exclude matches from same group
             exclude_same_subgroup: Exclude matches from same subgroup
             source_filter: Optional source string to filter results
+            query_metadata: Optional metadata for query_sentence (bypass cache)
 
         Returns:
             List of (sentence, normalized_distance, metadata)
@@ -291,8 +293,8 @@ class SemanticDistanceCalculator:
         if source_filter:
             where_clause["source"] = source_filter
 
-        # Helper to get current metadata for query sentence if it exists in our cache
-        current_metadata = self.metadata_cache.get(query_sentence, {})
+        # Use provided metadata or fallback to cache
+        current_metadata = query_metadata if query_metadata is not None else self.metadata_cache.get(query_sentence, {})
         current_group = current_metadata.get("group")
         current_subgroup = current_metadata.get("subgroup")
 
