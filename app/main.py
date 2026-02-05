@@ -228,7 +228,7 @@ async def get_sentences():
     return [d for d in all_sentences_data if d["source"] == active_collection]
 
 @app.get("/api/collection-overview")
-async def get_collection_overview(k: int = 2):
+async def get_collection_overview(k: int = 10):
     """Calculate ISEC for all sentences in current collection"""
     results = global_calculator.calculate_bulk_isec(k=k)
     return results

@@ -721,7 +721,7 @@
                         <div class="stat-card"
                             style="display: flex; flex-direction: column; justify-content: space-between;">
                             <div>
-                                <div class="stat-label">Best ISEC Score</div>
+                                <div class="stat-label">Highest ISEC Score</div>
                                 <div class="stat-val" style="color: var(--accent)">
                                     {{ sortedMatches[0] ? sortedMatches[0].isec_score.toFixed(3) : '-' }}
                                 </div>
@@ -800,14 +800,14 @@
                 <!-- Empty State / Overview -->
                 <div v-else-if="overviewLoading" class="empty-state">
                     <div class="loader"></div>
-                    <p style="margin-top: 1rem;">Calculating Dataset Overview (k=2)...</p>
+                    <p style="margin-top: 1rem;">Calculating Dataset Overview (k=10)...</p>
                 </div>
 
                 <div v-else-if="overviewResults.length > 0" class="results-container">
                     <div style="padding: 1.5rem 1.5rem 0.5rem 1.5rem;">
                         <h2 style="margin: 0; border: none;">Dataset Overview <span
                                 style="font-weight: normal; color: #94a3b8; font-size: 0.9rem;">(Global Ranking,
-                                k=2)</span></h2>
+                                k=10)</span></h2>
                         <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.5rem;">Showing ISEC scores for all
                             sentences in the current dataset. Click a sentence to see a detailed mapping.</p>
                     </div>
@@ -1041,7 +1041,7 @@
                     overviewLoading.value = true
                     overviewResults.value = []
                     try {
-                        const res = await fetch('/api/collection-overview?k=2')
+                        const res = await fetch('/api/collection-overview?k=10')
                         overviewResults.value = await res.json()
                     } catch (e) {
                         console.error(e)

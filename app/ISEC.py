@@ -345,7 +345,7 @@ class ISECCalculator:
             top_k_matches=top_k_matches,
         )
 
-    def calculate_bulk_isec(self, k: int = 2) -> List[Dict]:
+    def calculate_bulk_isec(self, k: int = 10) -> List[Dict]:
         """
         Calculate ISEC scores for all sentences in the current collection.
         Returns a list of dicts with sentence pairs and their ISEC scores.

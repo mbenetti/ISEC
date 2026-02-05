@@ -151,7 +151,7 @@ Calculate ISEC for a specific sentence.
 Calculate ISEC scores for all sentences in the current collection, returning sentence pairs.
 
 **Query Parameters**:
-- `k` (optional, default=2): Number of semantic matches to consider
+- `k` (optional, default=10): Number of semantic matches to consider
 
 **Response**:
 ```json
@@ -175,6 +175,38 @@ Calculate ISEC scores for all sentences in the current collection, returning sen
 ]
 ```
 
+### POST `/api/pair-detail`
+Get detailed transformation analysis for a specific sentence pair.
+
+**Request**:
+```json
+{
+  "sentence1": "Buenos Aires",
+  "sentence2": "BUENOS AIRES",
+  "params": { ... }
+}
+```
+
+**Response**:
+```json
+{
+  "sentence1": "Buenos Aires",
+  "sentence2": "BUENOS AIRES",
+  "isec_score": 10.234,
+  "semantic_distance": 0.023,
+  "cost_distance": {
+    "total": 2.5,
+    "average": 0.25,
+    "penalized": 2.8
+  },
+  "operations": [
+    {"type": "substitute", "from_char": "b", "to_char": "B", "cost": 1.0},
+    {"type": "match", "from_char": "u", "to_char": "U", "cost": 0.0}
+  ],
+  "operation_counts": {"match": 8, "substitute": 2}
+}
+```
+
 ## Features
 
 ### 1. Dataset Overview
@@ -189,7 +221,7 @@ When a dataset is selected, the application automatically displays a ranked tabl
   - ISEC score for the pair
 
 - **Ranking**: Pairs are sorted by ISEC score (descending)
-- **Calculation**: Uses k=2 for overview calculations
+- **Calculation**: Uses k=10 for overview calculations
 
 ### 2. Detailed Analysis
 
@@ -200,7 +232,15 @@ Click any sentence in the overview to view:
 - Individual ISEC scores for each match
 - Frequency Median Normalized (FMN) value
 
-### 3. Parameter Adjustment
+### 3. Pair Detail Analysis
+
+Clicking on any matched sentence in the results table opens a detailed analysis modal:
+- **Transformations**: Complete list of edit operations (substitute, insert, delete, transpose)
+- **Costs**: Individual operation costs and penalized distance breakdown
+- **Metrics**: Detailed view of Semantic Distance, Cost Distance, and ISEC Score
+- **Visualization**: Color-coded badges for operation types
+
+### 4. Parameter Adjustment
 
 Real-time parameter controls:
 - **Semantic Weight**: Balance between semantic and morphological components
@@ -208,7 +248,7 @@ Real-time parameter controls:
 - **Operation Costs**: Substitution, insertion, deletion, transposition
 - **Top Matches (k)**: Number of matches to display
 
-### 4. Navigation
+### 5. Navigation
 
 - **Back to Overview**: Button in detailed view returns to overview table
 - **Dataset Switching**: Dropdown to change active dataset
