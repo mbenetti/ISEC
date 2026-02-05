@@ -48,6 +48,10 @@ class CalculationRequest(BaseModel):
 class CollectionRequest(BaseModel):
     collection_name: str
 
+class CollectionOverviewRequest(BaseModel):
+    k: int = 10
+    params: Dict[str, float]
+
 class PairDetailRequest(BaseModel):
     sentence1: str
     sentence2: str
@@ -61,6 +65,8 @@ class ConfigResponse(BaseModel):
     cost_factor: float
     semantic_weight: float
     top_k: int
+    scaling_enabled: bool
+    log_base: float
 
 def load_data():
     """Load and merge data from all files in DATA_DIR into global structures"""
@@ -70,6 +76,7 @@ def load_data():
     
     all_sentences_data = []
     collections_map = {}
+    merged_data = {}
     
     if not os.path.exists(DATA_DIR):
         print(f"Warning: Data directory {DATA_DIR} not found.")
@@ -91,7 +98,12 @@ def load_data():
             col_group = Config.SENTENCES_GROUP_COLUMN if Config.SENTENCES_GROUP_COLUMN in df.columns else None
             
             for _, row in df.iterrows():
-                name = str(row[col_name])
+                name = str(row[col_name]).strip()
+                
+                # Apply capitalization config
+                if Config.IGNORE_CAPITALIZATION:
+                    name = name.lower()
+                
                 freq = 1
                 if col_freq:
                     try:
@@ -105,14 +117,21 @@ def load_data():
                     if pd.notna(val):
                         group_val = str(val)
                 
-                all_sentences_data.append({
-                    "sentence": name,
-                    "frequency": freq,
-                    "source": fname, # Use filename as source key
-                    "group": group_val
-                })
+                key = (fname, name)
+                if key in merged_data:
+                    merged_data[key]["frequency"] += freq
+                else:
+                    merged_data[key] = {
+                        "sentence": name,
+                        "frequency": freq,
+                        "source": fname, 
+                        "group": group_val
+                    }
         except Exception as e:
             print(f"Error loading {fname}: {e}")
+            
+    # Convert merged data to list
+    all_sentences_data = list(merged_data.values())
                 
     # Unique characters for cost matrix
     unique_chars = set()
@@ -206,7 +225,9 @@ async def get_config():
         "transposition": global_calculator.cost_calculator.default_transposition_cost,
         "cost_factor": Config.COST_FACTOR_PENALIZATION,
         "semantic_weight": global_calculator.semantic_weight,
-        "top_k": Config.ISEC_TOP_K_MATCHES
+        "top_k": Config.ISEC_TOP_K_MATCHES,
+        "scaling_enabled": Config.ISEC_FREQUENCY_SCALING_ENABLED,
+        "log_base": Config.ISEC_FREQUENCY_LOG_BASE
     }
 
 @app.get("/api/collections")
@@ -227,15 +248,49 @@ async def get_sentences():
     """Get list of sentences for current collection"""
     return [d for d in all_sentences_data if d["source"] == active_collection]
 
-@app.get("/api/collection-overview")
-async def get_collection_overview(k: int = 10):
+@app.post("/api/collection-overview")
+async def get_collection_overview(req: CollectionOverviewRequest):
     """Calculate ISEC for all sentences in current collection"""
-    results = global_calculator.calculate_bulk_isec(k=k)
+    
+    # Update params (same as calculate parameters)
+    params = req.params
+    if "semantic_weight" in params:
+        global_calculator.semantic_weight = params["semantic_weight"]
+        global_calculator.morphologic_weight = 1.0 - params["semantic_weight"]
+    
+    cc = global_calculator.cost_calculator
+    changed = False
+    
+    if "substitution" in params and params["substitution"] != cc.default_substitution_cost:
+        cc.default_substitution_cost = params["substitution"]
+        changed = True
+    if "insertion" in params and params["insertion"] != cc.default_insertion_cost:
+        cc.default_insertion_cost = params["insertion"]
+        changed = True
+    if "deletion" in params and params["deletion"] != cc.default_deletion_cost:
+        cc.default_deletion_cost = params["deletion"]
+        changed = True
+    if "transposition" in params and params["transposition"] != cc.default_transposition_cost:
+        cc.default_transposition_cost = params["transposition"]
+        changed = True
+        
+    if changed:
+        cc.setup_characters(all_chars)
+        
+    if "cost_factor" in params:
+        Config.COST_FACTOR_PENALIZATION = params["cost_factor"]
+
+    results = global_calculator.calculate_bulk_isec(k=req.k)
     return results
 
 @app.post("/api/calculate")
 async def calculate(req: CalculationRequest):
     """Calculate ISEC for a sentence with given params"""
+    
+    # Standardize input if config is on
+    sentence = req.sentence
+    if Config.IGNORE_CAPITALIZATION:
+        sentence = sentence.lower()
     
     # Update params
     params = req.params
@@ -279,12 +334,12 @@ async def calculate(req: CalculationRequest):
     if req.override_frequency is not None:
         freq = req.override_frequency
     else:
-        freq = global_calculator.frequencies.get(req.sentence, 1)
+        freq = global_calculator.frequencies.get(sentence, 1)
     
     # Run calculation
     # Only calculate for specific sentence
     # Note: `calculate_isec` calls `find_top_k_semantic_sentences`, which uses `self.source_filter`
-    result = global_calculator.calculate_isec(req.sentence, freq)
+    result = global_calculator.calculate_isec(sentence, freq)
     
     # Format output
     top_matches = []
@@ -309,6 +364,13 @@ async def calculate(req: CalculationRequest):
 @app.post("/api/pair-detail")
 async def get_pair_detail(req: PairDetailRequest):
     """Get detailed transformation analysis for a specific sentence pair"""
+    
+    # Standardize input if config is on
+    s1 = req.sentence1
+    s2 = req.sentence2
+    if Config.IGNORE_CAPITALIZATION:
+        s1 = s1.lower()
+        s2 = s2.lower()
     
     # Update params (same as calculate endpoint)
     params = req.params
@@ -340,19 +402,17 @@ async def get_pair_detail(req: PairDetailRequest):
         Config.COST_FACTOR_PENALIZATION = params["cost_factor"]
     
     # Calculate edit distance with operations
-    cost_result = global_calculator.cost_calculator.calculate_edit_distance(
-        req.sentence1, req.sentence2
-    )
+    cost_result = global_calculator.cost_calculator.calculate_edit_distance(s1, s2)
     
     # Calculate semantic distance
     semantic_matches = global_calculator.semantic_calculator.find_top_k_semantic_matches(
-        req.sentence1, k=1, exclude_same_group=False, exclude_same_subgroup=False
+        s1, k=1, exclude_same_group=False, exclude_same_subgroup=False
     )
     
     # Find the semantic distance for sentence2
     semantic_distance = 0.0
     for sent, dist, _ in semantic_matches:
-        if sent == req.sentence2:
+        if sent == s2:
             semantic_distance = dist
             break
     
@@ -360,8 +420,8 @@ async def get_pair_detail(req: PairDetailRequest):
     if semantic_distance == 0.0:
         try:
             # Get embeddings for both sentences
-            emb1 = global_calculator.semantic_calculator.get_embedding(req.sentence1)
-            emb2 = global_calculator.semantic_calculator.get_embedding(req.sentence2)
+            emb1 = global_calculator.semantic_calculator.get_embedding(s1)
+            emb2 = global_calculator.semantic_calculator.get_embedding(s2)
             # Calculate cosine distance
             import numpy as np
             similarity = np.dot(emb1, emb2) / (np.linalg.norm(emb1) * np.linalg.norm(emb2))
@@ -370,8 +430,8 @@ async def get_pair_detail(req: PairDetailRequest):
             semantic_distance = 0.0
     
     # Get frequencies
-    freq1 = global_calculator.frequencies.get(req.sentence1, 1)
-    freq2 = global_calculator.frequencies.get(req.sentence2, 1)
+    freq1 = global_calculator.frequencies.get(s1, 1)
+    freq2 = global_calculator.frequencies.get(s2, 1)
     
     # Calculate FMN for sentence1
     import math
@@ -430,6 +490,10 @@ async def get_pair_detail(req: PairDetailRequest):
             "penalized": cost_result.penalized_distance
         },
         "fmn": fmn,
+        "fmn_config": {
+            "log_base": Config.ISEC_FREQUENCY_LOG_BASE,
+            "scaling_enabled": Config.ISEC_FREQUENCY_SCALING_ENABLED
+        },
         "isec_score": isec_score if isec_score != float('inf') else 0,
         "operations": operations,
         "operation_counts": op_counts,

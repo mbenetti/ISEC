@@ -13,6 +13,7 @@
             --card-bg: #1e293b;
             --text-color: #e2e8f0;
             --primary: #38bdf8;
+            --primary-rgb: 56, 189, 248;
             --secondary: #818cf8;
             --accent: #f472b6;
             --border: #334155;
@@ -715,7 +716,7 @@
                             <div class="stat-val" :title="result.group">{{ result.group || 'N/A' }}</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-label">Freq Med Norm</div>
+                            <div class="stat-label">FMN {{ params.scaling_enabled ? '(log ' + params.log_base + ')' : '' }}</div>
                             <div class="stat-val">{{ result.fmn.toFixed(2) }}</div>
                         </div>
                         <div class="stat-card"
@@ -752,8 +753,7 @@
                                         class="clickable-sentence"
                                         @click="fetchPairDetail(result.sentence, match.sentence)">
                                         <td style="text-align: center">
-                                            <span class="rank-badge" :class="'rank-' + (index + 1)">{{ index + 1
-                                                }}</span>
+                                            <span class="rank-badge" :class="'rank-' + (index + 1)">{{ index + 1 }}</span>
                                         </td>
                                         <td>
                                             <div style="font-weight: 500; font-size: 0.95rem;">{{ match.sentence }}
@@ -764,8 +764,7 @@
                                         </td>
                                         <td>
                                             <div style="display: flex; align-items: center; gap: 8px;">
-                                                <span style="font-family: monospace;">{{
-                                                    match.semantic_distance.toFixed(3) }}</span>
+                                                <span style="font-family: monospace;">{{ match.semantic_distance.toFixed(3) }}</span>
                                                 <div class="bar-container">
                                                     <div class="bar-fill"
                                                         :style="{width: (match.semantic_distance * 100) + '%', background: '#38bdf8'}">
@@ -775,8 +774,7 @@
                                         </td>
                                         <td>
                                             <div style="display: flex; align-items: center; gap: 8px;">
-                                                <span style="font-family: monospace;">{{ match.cost_distance.toFixed(2)
-                                                    }}</span>
+                                                <span style="font-family: monospace;">{{ match.cost_distance.toFixed(2) }}</span>
                                                 <div class="bar-container">
                                                     <div class="bar-fill"
                                                         :style="{width: Math.min((match.cost_distance / 10) * 100, 100) + '%', background: '#f472b6'}">
@@ -840,10 +838,8 @@
                                         </div>
                                     </td>
                                     <td style="vertical-align: top; padding-top: 1.2rem;">
-                                        <div style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0.5rem;">{{
-                                            res.group }}</div>
-                                        <div style="color: #64748b; font-size: 0.75rem; margin-left: 1.5rem;">{{
-                                            res.matched_group }}</div>
+                                        <div style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0.5rem;">{{ res.group }}</div>
+                                        <div style="color: #64748b; font-size: 0.75rem; margin-left: 1.5rem;">{{ res.matched_group }}</div>
                                     </td>
                                     <td
                                         style="text-align: center; font-family: monospace; vertical-align: top; padding-top: 1.2rem;">
@@ -885,27 +881,31 @@
                                 <div style="flex: 1;">
                                     <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.5rem;">SOURCE
                                         SENTENCE</div>
-                                    <div style="font-size: 1.1rem; color: var(--text-color); font-weight: 500;">{{
-                                        pairDetail.sentence1 }}</div>
-                                    <div style="font-size: 0.8rem; color: var(--primary); margin-top: 0.5rem;">Group: {{
-                                        pairDetail.group1 }}</div>
+                                    <div style="font-size: 1.1rem; color: var(--text-color); font-weight: 500;">{{ pairDetail.sentence1 }}</div>
+                                    <div
+                                        style="font-size: 0.8rem; color: var(--primary); margin-top: 0.5rem; display: flex; gap: 1rem;">
+                                        <span>Group: {{ pairDetail.group1 }}</span>
+                                        <span>Freq: {{ pairDetail.frequency1 }}</span>
+                                    </div>
                                 </div>
                                 <div style="font-size: 1.5rem; color: #64748b;">→</div>
                                 <div style="flex: 1; text-align: right;">
                                     <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.5rem;">MATCHED
                                         SENTENCE</div>
-                                    <div style="font-size: 1.1rem; color: var(--text-color); font-weight: 500;">{{
-                                        pairDetail.sentence2 }}</div>
-                                    <div style="font-size: 0.8rem; color: var(--primary); margin-top: 0.5rem;">Group: {{
-                                        pairDetail.group2 }}</div>
+                                    <div style="font-size: 1.1rem; color: var(--text-color); font-weight: 500;">{{ pairDetail.sentence2 }}</div>
+                                    <div
+                                        style="font-size: 0.8rem; color: var(--primary); margin-top: 0.5rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                                        <span>Freq: {{ pairDetail.frequency2 }}</span>
+                                        <span>Group: {{ pairDetail.group2 }}</span>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Summary Stats -->
                             <div class="pair-summary">
-                                <div class="pair-summary-card">
-                                    <div class="pair-summary-label">ISEC Score</div>
-                                    <div class="pair-summary-value">{{ pairDetail.isec_score.toFixed(3) }}</div>
+                                <div class="pair-summary-card" style="border-top: 3px solid var(--primary);">
+                                    <div class="pair-summary-label">FMN {{ pairDetail.fmn_config.scaling_enabled ? '(log ' + pairDetail.fmn_config.log_base + ')' : '' }}</div>
+                                    <div class="pair-summary-value">{{ pairDetail.fmn.toFixed(3) }}</div>
                                 </div>
                                 <div class="pair-summary-card">
                                     <div class="pair-summary-label">Semantic Distance</div>
@@ -920,6 +920,12 @@
                                     <div class="pair-summary-label">Operations</div>
                                     <div class="pair-summary-value">{{ pairDetail.num_operations }}</div>
                                 </div>
+                                <div class="pair-summary-card"
+                                    style="background: rgba(var(--primary-rgb), 0.15); border: 1px solid var(--primary); position: relative;">
+                                    <div class="pair-summary-label" style="color: var(--primary); font-weight: 600;">
+                                        ISEC Score</div>
+                                    <div class="pair-summary-value" style="color: var(--primary); font-weight: 800;">{{ pairDetail.isec_score.toFixed(3) }}</div>
+                                </div>
                             </div>
 
                             <!-- Cost Breakdown -->
@@ -928,20 +934,17 @@
                                 <div
                                     style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.5rem;">
                                     <span style="color: #94a3b8;">Average Operation Cost:</span>
-                                    <span style="font-family: monospace;">{{ pairDetail.cost_distance.average.toFixed(4)
-                                        }}</span>
+                                    <span style="font-family: monospace;">{{ pairDetail.cost_distance.average.toFixed(4) }}</span>
                                 </div>
                                 <div
                                     style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.5rem;">
                                     <span style="color: #94a3b8;">Sum of Edit Costs:</span>
-                                    <span style="font-family: monospace;">{{
-                                        pairDetail.cost_distance.sum_edit_costs.toFixed(4) }}</span>
+                                    <span style="font-family: monospace;">{{ pairDetail.cost_distance.sum_edit_costs.toFixed(4) }}</span>
                                 </div>
                                 <div
                                     style="display: flex; justify-content: space-between; font-size: 0.9rem; border-top: 1px solid var(--border); padding-top: 0.5rem; margin-top: 0.5rem;">
                                     <span style="color: var(--primary); font-weight: 600;">Penalized Distance:</span>
-                                    <span style="font-family: monospace; font-weight: 600;">{{
-                                        pairDetail.cost_distance.penalized.toFixed(4) }}</span>
+                                    <span style="font-family: monospace; font-weight: 600;">{{ pairDetail.cost_distance.penalized.toFixed(4) }}</span>
                                 </div>
                             </div>
 
@@ -1004,7 +1007,7 @@
                     insertion: 1.3,
                     deletion: 1.3,
                     transposition: 0.5,
-                    top_k: 3
+                    top_k: 10
                 })
                 const result = ref(null)
                 const loading = ref(false)
@@ -1041,7 +1044,14 @@
                     overviewLoading.value = true
                     overviewResults.value = []
                     try {
-                        const res = await fetch('/api/collection-overview?k=10')
+                        const res = await fetch('/api/collection-overview', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                k: 10,
+                                params: params.value
+                            })
+                        })
                         overviewResults.value = await res.json()
                     } catch (e) {
                         console.error(e)
@@ -1079,7 +1089,11 @@
                 }
 
                 const calculate = async () => {
-                    if (!selectedSentence.value) return
+                    if (!selectedSentence.value) {
+                        // If no sentence selected, update the overview
+                        await fetchOverview()
+                        return
+                    }
 
                     loading.value = false
                     if (!result.value || result.value.sentence !== selectedSentence.value) {

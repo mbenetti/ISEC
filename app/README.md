@@ -70,7 +70,7 @@ Returns current configuration parameters.
   "insertion": 1.3,
   "deletion": 1.3,
   "transposition": 0.5,
-  "top_k": 3
+  "top_k": 10
 }
 ```
 
@@ -122,7 +122,7 @@ Calculate ISEC for a specific sentence.
     "insertion": 1.3,
     "deletion": 1.3,
     "transposition": 0.5,
-    "top_k": 3
+    "top_k": 10
   },
   "override_frequency": 100
 }
@@ -147,11 +147,16 @@ Calculate ISEC for a specific sentence.
 }
 ```
 
-### GET `/api/collection-overview`
+### POST `/api/collection-overview`
 Calculate ISEC scores for all sentences in the current collection, returning sentence pairs.
 
-**Query Parameters**:
-- `k` (optional, default=10): Number of semantic matches to consider
+**Request**:
+```json
+{
+  "k": 10,
+  "params": { ... }
+}
+```
 
 **Response**:
 ```json
@@ -274,6 +279,7 @@ Settings are defined in `config.py` (parent directory):
 - Ollama host and model
 - Default weights and costs
 - Frequency scaling options
+- Capitalization handling (`IGNORE_CAPITALIZATION`)
 - Group exclusion settings
 
 ## Running the Application

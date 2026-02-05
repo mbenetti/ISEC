@@ -773,6 +773,11 @@ def load_custom_costs_from_excel(
         for idx, row in df.iterrows():
             char1 = str(row[char1_column]).strip()
             char2 = str(row[char2_column]).strip()
+            
+            if Config.IGNORE_CAPITALIZATION:
+                char1 = char1.lower()
+                char2 = char2.lower()
+                
             cost = float(row[cost_column])
 
             # Determine operation type

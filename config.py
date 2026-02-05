@@ -92,7 +92,7 @@ class Config:
 
     # ISEC weight configuration (loaded from .env)
     ISEC_SEMANTIC_WEIGHT = get_float_env("ISEC_SEMANTIC_WEIGHT", 0.4)
-    ISEC_TOP_K_MATCHES = int(get_float_env("ISEC_TOP_K_MATCHES", 3))
+    ISEC_TOP_K_MATCHES = int(get_float_env("ISEC_TOP_K_MATCHES", 10))
     ISEC_OUTPUT_FILE = get_string_env("ISEC_OUTPUT_FILE", "ISEC_Results.xlsx")
 
     # Frequency scaling configuration
@@ -108,6 +108,9 @@ class Config:
     # Group exclusion settings
     SAME_GROUP_EXCLUSION = get_bool_env("SAME_GROUP_EXCLUSION", False)
     SAME_SUBGROUP_EXCLUSION = get_bool_env("SAME_SUBGROUP_EXCLUSION", False)
+
+    # Capitalization handling (loaded from .env)
+    IGNORE_CAPITALIZATION = get_bool_env("IGNORE_CAPITALIZATION", False)
 
     @classmethod
     def display(cls) -> None:
