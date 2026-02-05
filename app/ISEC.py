@@ -267,20 +267,22 @@ class ISECCalculator:
             query_metadata=query_meta,
         )
 
-    def calculate_isec(self, sentence: str, frequency: int) -> ISECResult:
+    def calculate_isec(self, sentence: str, frequency: int, k: int = None) -> ISECResult:
         """
         Calculate ISEC metric for a single sentence.
 
         Args:
             sentence: The sentence to analyze
             frequency: The frequency of this sentence
+            k: Number of matches (defaults to Config.ISEC_TOP_K_MATCHES)
 
         Returns:
             ISECResult with per-match data
         """
         # Get top k semantic matches
+        top_k = k if k is not None else Config.ISEC_TOP_K_MATCHES
         top_k_semantic = self.find_top_k_semantic_sentences(
-            sentence, Config.ISEC_TOP_K_MATCHES
+            sentence, top_k
         )
 
         # Calculate FMN according to user requirement: Freq=1 => FMN=1
@@ -342,6 +344,56 @@ class ISECCalculator:
             frequency_median_normalized=fmn,
             top_k_matches=top_k_matches,
         )
+
+    def calculate_bulk_isec(self, k: int = 2) -> List[Dict]:
+        """
+        Calculate ISEC scores for all sentences in the current collection.
+        Returns a list of dicts with sentence pairs and their ISEC scores.
+        Each entry contains the source sentence and its best matching sentence.
+        """
+        results = []
+        for sentence in self.sentences:
+            freq = self.frequencies.get(sentence, 1)
+            try:
+                res = self.calculate_isec(sentence, freq, k=k)
+                
+                # Get the best match (highest ISEC score)
+                # top_k_matches is a list of tuples: (sentence, semantic_dist, cost_dist, match_isec, metadata)
+                if res.top_k_matches and len(res.top_k_matches) > 0:
+                    # Find the match with the highest ISEC score (index 3 in tuple)
+                    best_match = max(res.top_k_matches, key=lambda x: x[3])
+                    matched_sentence = best_match[0]
+                    isec_score = best_match[3] if best_match[3] != float('inf') else 0
+                    matched_metadata = best_match[4]
+                    matched_group = matched_metadata.get('group', 'N/A')
+                else:
+                    isec_score = 0
+                    matched_sentence = "No match found"
+                    matched_group = "N/A"
+                
+                results.append({
+                    "sentence": sentence,
+                    "frequency": freq,
+                    "group": self.metadata_map.get(sentence, {}).get("group", "N/A"),
+                    "matched_sentence": matched_sentence,
+                    "matched_group": matched_group,
+                    "isec_score": isec_score
+                })
+            except Exception as e:
+                print(f"Error calculating bulk ISEC for {sentence}: {e}")
+                results.append({
+                    "sentence": sentence,
+                    "frequency": freq,
+                    "group": self.metadata_map.get(sentence, {}).get("group", "N/A"),
+                    "matched_sentence": "Error",
+                    "matched_group": "N/A",
+                    "isec_score": 0,
+                    "error": str(e)
+                })
+        
+        # Sort by ISEC score descending
+        results.sort(key=lambda x: x["isec_score"], reverse=True)
+        return results
 
     def calculate_all_isec(self) -> List[ISECResult]:
         """
