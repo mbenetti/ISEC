@@ -1,5 +1,11 @@
 # ISEC Parameter Analysis: Final Interpretation Guide
 
+> **Note on Terminology**: This guide refers to **"Alpha"** (formerly "Semantic Weight"). 
+> Alpha is an exponent in the Geometric Mean calculation ($DS^\alpha \cdot DM^{1-\alpha}$).
+> - **Alpha = 0.0**: Pure Morphological bias (Structure-focused)
+> - **Alpha = 1.0**: Pure Semantic bias (Meaning-focused)
+> The interpretation of "movement" from 0.0 to 1.0 remains the same.
+
 ## Understanding How Parameters Move Sentences
 
 This guide explains the core insight from our parameter sensitivity analysis: **how different parameter settings cause sentences to move relative to each other in terms of similarity**.
@@ -17,16 +23,16 @@ When we say sentences "move":
 
 ## Parameter Effects Explained
 
-### 1. Semantic Weight: The Most Dramatic Mover
+### 1. Alpha: The Most Dramatic Mover
 
 **Range**: 0.0 (100% structure) to 1.0 (100% meaning)
 
 **Movement Pattern**:
 ```
-At semantic_weight = 0.0:
+At alpha = 0.0:
   XDKT11T3 (4.17) > XDKG11T3 (3.85) > LDKT11T3 (0.35) > LDKT11T3QET (0.02)
 
-At semantic_weight = 1.0:
+At alpha = 1.0:
   XDKT11T3 (96.40) > XDKG11T3 (78.92) > LDKT11T3 (4.23) > LDKT11T3QET (0.45)
 ```
 
@@ -77,14 +83,14 @@ In `sentence_trajectories.png`:
 - **Lines**: Each sentence's "movement path"
 
 **Interpretation**:
-- **Steep slope**: High sensitivity to semantic weight
+- **Steep slope**: High sensitivity to alpha
 - **Flat line**: Low sensitivity, stable similarity
 - **Crossing lines**: Ranking changes between sentences
 
 ### Example Trajectory Analysis
 
 From our analysis:
-1. **XDKT11T3**: Very steep slope (highly sensitive to semantic weight)
+1. **XDKT11T3**: Very steep slope (highly sensitive to alpha)
 2. **XDKG11T3**: Moderate slope (moderately sensitive)
 3. **LDKT11T3**: Gentle slope (less sensitive)
 4. **LDKT11T3QET**: Nearly flat (very stable/consistently different)
@@ -93,24 +99,24 @@ From our analysis:
 
 ### Scenario: Finding the Closest Match to XDKT11T3
 
-**At semantic_weight = 0.0 (Structure-focused)**:
+**At alpha = 0.0 (Structure-focused)**:
 - Closest match: XDKG11T3 (ISEC = 6.67)
 - Second closest: LDKT11T3 (ISEC = 0.35)
 - **XDKG11T3 is 19× more similar than LDKT11T3**
 
-**At semantic_weight = 0.5 (Balanced)**:
+**At alpha = 0.5 (Balanced)**:
 - Closest match: XDKG11T3 (ISEC = 12.95)
 - Second closest: LDKT11T3 (ISEC = 0.71)
 - **XDKG11T3 is 18× more similar than LDKT11T3**
 
-**At semantic_weight = 1.0 (Meaning-focused)**:
+**At alpha = 1.0 (Meaning-focused)**:
 - Closest match: XDKG11T3 (ISEC = 223.59)
 - Second closest: LDKT11T3 (ISEC = 4.23)
 - **XDKG11T3 is 53× more similar than LDKT11T3**
 
 **The Movement Story**:
-- XDKG11T3 **moves toward** XDKT11T3 as semantic weight increases
-- LDKT11T3 **moves away** from XDKT11T3 as semantic weight increases
+- XDKG11T3 **moves toward** XDKT11T3 as alpha increases
+- LDKT11T3 **moves away** from XDKT11T3 as alpha increases
 - The **gap between them widens** as semantic importance grows
 
 ## How to Use This for Your Research
@@ -131,11 +137,11 @@ Look for sentences with **parallel or flat trajectories**:
 
 ### 3. Understand Domain Requirements
 
-**Meaning-focused analysis** (high semantic weight):
+**Meaning-focused analysis** (high alpha):
 - Good for: Content analysis, topic modeling, semantic clustering
 - Watch for: Sentences that become much more similar
 
-**Structure-focused analysis** (low semantic weight):
+**Structure-focused analysis** (low alpha):
 - Good for: Pattern matching, syntax analysis, structural clustering
 - Watch for: Sentences that share character-level patterns
 
@@ -165,8 +171,8 @@ Look for sentences with **parallel or flat trajectories**:
 ## Visual Evidence of Movement
 
 ### 1. Heatmap Patterns (`isec_heatmap_all_sentences.png`)
-- **Red bands**: Sentences that become more similar as semantic weight increases
-- **Blue bands**: Sentences that become less similar as semantic weight increases
+- **Red bands**: Sentences that become more similar as alpha increases
+- **Blue bands**: Sentences that become less similar as alpha increases
 - **Horizontal consistency**: Stable sentences
 - **Vertical variation**: Parameter-sensitive sentences
 
@@ -175,7 +181,7 @@ Look for sentences with **parallel or flat trajectories**:
 - **Parallel lines**: Stable relative relationships
 - **Converging/diverging**: Changing similarity relationships
 
-### 3. Sensitivity Plots (`semantic_weight_analysis.png`)
+### 3. Sensitivity Plots (`alpha_analysis.png`)
 - **Top-left panel**: Shows how individual match scores change
 - **Top-right panel**: Shows how overall scores change
 - **Bottom-left panel**: Shows distance component changes
@@ -200,7 +206,7 @@ Ensure key findings are robust across reasonable parameter ranges.
 1. **Review the generated visualizations**:
    - `sentence_trajectories.png` - See how sentences move
    - `isec_heatmap_all_sentences.png` - See overall patterns
-   - `semantic_weight_analysis.png` - See detailed parameter effects
+   - `alpha_analysis.png` - See detailed parameter effects
 
 2. **Examine `sensitivity_report.xlsx`**:
    - Contains all raw data for custom analysis

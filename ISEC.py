@@ -55,7 +55,7 @@ class ISECCalculator:
         custom_costs_file: str = None,
         ollama_host: str = None,
         embedding_model: str = None,
-        semantic_weight: float = None,
+        alpha: float = None,
     ):
         """
         Initialize ISEC Calculator.
@@ -71,12 +71,11 @@ class ISECCalculator:
         self.custom_costs_file = custom_costs_file or Config.CUSTOM_COSTS_FILE
         self.ollama_host = ollama_host or Config.OLLAMA_HOST
         self.embedding_model = embedding_model or Config.OLLAMA_EMBEDDING_MODEL
-        self.semantic_weight = (
-            semantic_weight
-            if semantic_weight is not None
-            else Config.ISEC_SEMANTIC_WEIGHT
+        self.alpha = (
+            alpha
+            if alpha is not None
+            else Config.ISEC_ALPHA
         )
-        self.morphologic_weight = 1.0 - self.semantic_weight
 
         # Load sentences and frequencies
         self.sentences = []
@@ -166,38 +165,11 @@ class ISECCalculator:
     def calculate_frequency_median_normalized(self) -> float:
         """
         Calculate frequency median normalized (FMN).
-
-        FMN = frequency / median(all_frequencies)
-
-        Returns:
-            The median frequency value
+        Returns the raw median frequency value.
         """
         freq_values = list(self.frequencies.values())
         if not freq_values:
             return 1.0
-
-        # Apply log scaling to frequencies if enabled
-        if Config.ISEC_FREQUENCY_SCALING_ENABLED:
-            # Use log base from config, default to natural log if base <= 1
-            log_base = (
-                Config.ISEC_FREQUENCY_LOG_BASE
-                if Config.ISEC_FREQUENCY_LOG_BASE > 1
-                else math.e
-            )
-            # Apply log scaling to all frequency values
-            scaled_freq_values = []
-            for freq in freq_values:
-                if freq > 0:
-                    if log_base == math.e:
-                        scaled_freq = math.log(freq)
-                    else:
-                        scaled_freq = math.log(freq, log_base)
-                    # Ensure scaled frequency is positive
-                    scaled_freq = max(scaled_freq, 1e-10)
-                else:
-                    scaled_freq = 1e-10
-                scaled_freq_values.append(scaled_freq)
-            freq_values = scaled_freq_values
 
         return statistics.median(freq_values)
 
@@ -266,27 +238,25 @@ class ISECCalculator:
             sentence, Config.ISEC_TOP_K_MATCHES
         )
 
-        # Calculate frequency median normalized (needed for ISEC calculation)
+        # Calculate FMN according to user requirement: FMN = frequency / median
         median_freq = self.calculate_frequency_median_normalized()
+        fmn_raw = frequency / median_freq if median_freq > 0 else float(frequency)
 
-        # Apply log scaling to frequency if enabled
-        if Config.ISEC_FREQUENCY_SCALING_ENABLED and frequency > 0:
-            # Use log base from config, default to natural log if base <= 1
+        if Config.ISEC_FREQUENCY_SCALING_ENABLED:
             log_base = (
                 Config.ISEC_FREQUENCY_LOG_BASE
                 if Config.ISEC_FREQUENCY_LOG_BASE > 1
                 else math.e
             )
+            fmn_raw_clamped = max(fmn_raw, 1e-10)
             if log_base == math.e:
-                scaled_frequency = math.log(frequency)
+                numerator = math.log(fmn_raw_clamped) + 1
             else:
-                scaled_frequency = math.log(frequency, log_base)
-            # Ensure scaled frequency is positive
-            scaled_frequency = max(scaled_frequency, 1e-10)
+                numerator = math.log(fmn_raw_clamped, log_base) + 1
         else:
-            scaled_frequency = frequency
+            numerator = fmn_raw
 
-        fmn = scaled_frequency / median_freq if median_freq > 0 else scaled_frequency
+        fmn = numerator # For backward compatibility in result object naming
 
         if not top_k_semantic:
             # No matches found
@@ -307,13 +277,17 @@ class ISECCalculator:
             )
             cost_dist = cost_result.penalized_distance
 
-            # Calculate ISEC for this individual match
-            match_weighted_distance = (
-                self.semantic_weight * semantic_dist
-                + self.morphologic_weight * cost_dist
-            )
-            if match_weighted_distance > 0:
-                match_isec = fmn / match_weighted_distance
+            # Calculate ISEC for this individual match using Weighted Geometric Mean
+            # ISEC = Numerator / (DS^alpha * DM^(1-alpha))
+            
+            # Protection against zero distances
+            ds = max(semantic_dist, 1e-6)
+            dm = max(cost_dist, 1e-6)
+            
+            denominator = pow(ds, self.alpha) * pow(dm, 1.0 - self.alpha)
+            
+            if denominator > 0:
+                match_isec = numerator / denominator
             else:
                 match_isec = float("inf")
 
@@ -373,7 +347,7 @@ class ISECCalculator:
             )
 
         print(
-            f"\n  Weights: semantic={self.semantic_weight:.1%}, morphologic={self.morphologic_weight:.1%}"
+            f"\n  Weights: alpha={self.alpha:.1%}, (1-alpha)={1.0-self.alpha:.1%}"
         )
 
     def print_batch_results(self, results: List[ISECResult]) -> None:
@@ -488,8 +462,8 @@ def main():
     try:
         calculator = ISECCalculator()
         print(f"\nISEC Configuration:")
-        print(f"  Semantic Weight: {calculator.semantic_weight:.1%}")
-        print(f"  Morphologic Weight: {calculator.morphologic_weight:.1%}")
+        print(f"  Alpha (Semantic): {calculator.alpha:.1%}")
+        print(f"  (1 - Alpha) (Morphologic): {1.0 - calculator.alpha:.1%}")
         print(f"  Top K Matches: {Config.ISEC_TOP_K_MATCHES}")
         print(f"  Output File: {Config.ISEC_OUTPUT_FILE}")
     except Exception as e:

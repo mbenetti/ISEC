@@ -32,7 +32,8 @@ A comprehensive Python system for calculating **Levenshtein-Damerau distance** w
 ### ISEC Calculator:
 - **Índice de Sensibilidad al Error Categórico** metric calculation
 - **Per-pair ISEC scores** (no aggregated metrics)
-- **Frequency Median Normalized** (FMN) calculation
+- **Per-pair ISEC scores** (no aggregated metrics)
+- **Simplified Frequency Log-Scaling** ($1 + \log_{10}$)
 - **Complete frequency information** for both source and matched sentences
 - **Excel export** with independent per-pair calculations
 - **Metadata filtering** integrated with semantic matching
@@ -115,7 +116,7 @@ OLLAMA_EMBEDDING_MODEL=embeddinggemma
 
 ### ISEC Settings:
 ```
-ISEC_SEMANTIC_WEIGHT=0.4
+ISEC_ALPHA=0.2  # Geometric Mean exponent
 ISEC_TOP_K_MATCHES=3
 ```
 
@@ -221,7 +222,7 @@ from ISEC import ISECCalculator
 # Create ISEC calculator
 isec_calc = ISECCalculator(
     sentences_file="Clases.xlsx",
-    semantic_weight=0.4  # 40% semantic, 60% morphological
+    alpha=0.2  # Bias towards morphological (0.2) or semantic (0.8)
 )
 
 # Calculate ISEC for all sentences
@@ -327,19 +328,19 @@ python test_matched_frequency.py
 
 The ISEC calculator exports to Excel with the following columns:
 
-| Column | Description |
-|--------|-------------|
-| `Sentence` | Source sentence |
-| `Sentence_Group` | Group of source sentence |
-| `Frequency` | Frequency of source sentence |
-| `FMN` | Frequency Median Normalized |
-| `Match_Rank` | Rank of this match (1 to k) |
-| `Matched_Sentence` | The matched sentence |
-| `Matched_Sentence_Group` | Group of matched sentence |
-| `Matched_Frequency` | Frequency of matched sentence |
-| `Semantic_Distance` | Semantic distance between the pair |
-| `Cost_Distance` | Edit cost distance between the pair |
-| `ISEC_Score` | ISEC score for this specific pair |
+| Column                   | Description                         |
+| ------------------------ | ----------------------------------- |
+| `Sentence`               | Source sentence                     |
+| `Sentence_Group`         | Group of source sentence            |
+| `Frequency`              | Frequency of source sentence        |
+| `FMN`                    | Frequency Median Normalized         |
+| `Match_Rank`             | Rank of this match (1 to k)         |
+| `Matched_Sentence`       | The matched sentence                |
+| `Matched_Sentence_Group` | Group of matched sentence           |
+| `Matched_Frequency`      | Frequency of matched sentence       |
+| `Semantic_Distance`      | Semantic distance between the pair  |
+| `Cost_Distance`          | Edit cost distance between the pair |
+| `ISEC_Score`             | ISEC score for this specific pair   |
 
 **Key Features:**
 - Each row shows independent ISEC calculation for a specific sentence-match pair
@@ -696,11 +697,11 @@ Includes:
 ### Clases.xlsx (Sentences)
 Load sentences and their frequencies from this file.
 
-| Name | Frequency |
-|------|-----------|
-| XDKT11T3 | 1 |
-| XDKG11T3 | 1 |
-| LDKT11T3 | 1 |
+| Name     | Frequency |
+| -------- | --------- |
+| XDKT11T3 | 1         |
+| XDKG11T3 | 1         |
+| LDKT11T3 | 1         |
 
 **Required columns:**
 - `Name`: The sentence or sequence string
@@ -709,11 +710,11 @@ Load sentences and their frequencies from this file.
 ### Custom_cost.xlsx (Substitution and Transposition Costs)
 Define custom costs for character pair operations.
 
-| Character1 | Character2 | Cost | Operation |
-|------------|-----------|------|-----------|
-| A | S | 0.5 | substitution |
-| E | I | 0.3 | substitution |
-| T | D | 0.4 | transposition |
+| Character1 | Character2 | Cost | Operation     |
+| ---------- | ---------- | ---- | ------------- |
+| A          | S          | 0.5  | substitution  |
+| E          | I          | 0.3  | substitution  |
+| T          | D          | 0.4  | transposition |
 
 **Required columns:**
 - `Character1`: First character

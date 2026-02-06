@@ -1,7 +1,9 @@
 
 import sys
 import os
+import math
 import pandas as pd
+import numpy as np
 from typing import List, Dict, Optional
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
@@ -63,7 +65,7 @@ class ConfigResponse(BaseModel):
     deletion: float
     transposition: float
     cost_factor: float
-    semantic_weight: float
+    alpha: float
     top_k: int
     scaling_enabled: bool
     log_base: float
@@ -188,6 +190,7 @@ def set_active_collection(source_filter: str):
     # Update calculator's working set
     global_calculator.sentences = [d["sentence"] for d in filtered_data]
     global_calculator.frequencies = {d["sentence"]: d["frequency"] for d in filtered_data}
+    global_calculator.max_frequency = max(global_calculator.frequencies.values()) if global_calculator.frequencies else 1
     
     # Store localized metadata for group exclusion and UI
     global_calculator.metadata_map = {
@@ -224,7 +227,7 @@ async def get_config():
         "deletion": global_calculator.cost_calculator.default_deletion_cost,
         "transposition": global_calculator.cost_calculator.default_transposition_cost,
         "cost_factor": Config.COST_FACTOR_PENALIZATION,
-        "semantic_weight": global_calculator.semantic_weight,
+        "alpha": global_calculator.alpha,
         "top_k": Config.ISEC_TOP_K_MATCHES,
         "scaling_enabled": Config.ISEC_FREQUENCY_SCALING_ENABLED,
         "log_base": Config.ISEC_FREQUENCY_LOG_BASE
@@ -254,9 +257,10 @@ async def get_collection_overview(req: CollectionOverviewRequest):
     
     # Update params (same as calculate parameters)
     params = req.params
-    if "semantic_weight" in params:
-        global_calculator.semantic_weight = params["semantic_weight"]
-        global_calculator.morphologic_weight = 1.0 - params["semantic_weight"]
+    if "alpha" in params:
+        global_calculator.alpha = params["alpha"]
+    elif "semantic_weight" in params: # Backward compatibility
+        global_calculator.alpha = params["semantic_weight"]
     
     cc = global_calculator.cost_calculator
     changed = False
@@ -295,10 +299,11 @@ async def calculate(req: CalculationRequest):
     # Update params
     params = req.params
     
-    # Update Semantic Weight
-    if "semantic_weight" in params:
-        global_calculator.semantic_weight = params["semantic_weight"]
-        global_calculator.morphologic_weight = 1.0 - params["semantic_weight"]
+    # Update Alpha
+    if "alpha" in params:
+        global_calculator.alpha = params["alpha"]
+    elif "semantic_weight" in params:
+        global_calculator.alpha = params["semantic_weight"]
         
     # Update Cost Calculator params
     cc = global_calculator.cost_calculator
@@ -343,20 +348,24 @@ async def calculate(req: CalculationRequest):
     
     # Format output
     top_matches = []
-    for rank, (matched_sent, sem_dist, cost_dist, isec_score, metadata) in enumerate(result.top_k_matches, 1):
+    for rank, (matched_sent, sem_dist, cost_dist, isec_score, metadata, pair_numerator) in enumerate(result.top_k_matches, 1):
          top_matches.append({
              "rank": rank,
              "sentence": matched_sent,
              "semantic_distance": sem_dist,
              "cost_distance": cost_dist,
              "isec_score": isec_score if isec_score != float('inf') else 0,
+             "pair_numerator": pair_numerator,
              "group": metadata.get("group", "N/A")
          })
          
     return {
         "sentence": req.sentence,
         "frequency": result.frequency,
-        "fmn": result.frequency_median_normalized,
+        "median_frequency": result.median_frequency,
+        "max_frequency": result.max_frequency,
+        "raw_fmn": result.raw_fmn,
+        "fmn": result.frequency_median_normalized, # Scaled Numerator for source
         "group": global_calculator.metadata_map.get(req.sentence, {}).get("group", "N/A"),
         "top_matches": top_matches
     }
@@ -375,9 +384,10 @@ async def get_pair_detail(req: PairDetailRequest):
     # Update params (same as calculate endpoint)
     params = req.params
     
-    if "semantic_weight" in params:
-        global_calculator.semantic_weight = params["semantic_weight"]
-        global_calculator.morphologic_weight = 1.0 - params["semantic_weight"]
+    if "alpha" in params:
+        global_calculator.alpha = params["alpha"]
+    elif "semantic_weight" in params:
+        global_calculator.alpha = params["semantic_weight"]
         
     cc = global_calculator.cost_calculator
     changed = False
@@ -411,50 +421,48 @@ async def get_pair_detail(req: PairDetailRequest):
     
     # Find the semantic distance for sentence2
     semantic_distance = 0.0
+    found_match = False
+    
     for sent, dist, _ in semantic_matches:
         if sent == s2:
             semantic_distance = dist
+            found_match = True
             break
-    
-    # If not found in top matches, calculate directly
-    if semantic_distance == 0.0:
+            
+    # If not found in top matches, calculate directly specifically for this pair
+    if not found_match:
         try:
-            # Get embeddings for both sentences
-            emb1 = global_calculator.semantic_calculator.get_embedding(s1)
-            emb2 = global_calculator.semantic_calculator.get_embedding(s2)
-            # Calculate cosine distance
-            import numpy as np
-            similarity = np.dot(emb1, emb2) / (np.linalg.norm(emb1) * np.linalg.norm(emb2))
-            semantic_distance = 1.0 - similarity
-        except:
-            semantic_distance = 0.0
+            # We must use the same method as find_similar but for a specific pair
+            # Calculate embedding only if needed (assuming cache handles it)
+            dist = global_calculator.semantic_calculator.calculate_distance(s1, s2)
+            semantic_distance = dist
+        except Exception as e:
+            print(f"Error calculating direct distance: {e}")
+            semantic_distance = 1.0 # Worst case fallback
     
     # Get frequencies
     freq1 = global_calculator.frequencies.get(s1, 1)
     freq2 = global_calculator.frequencies.get(s2, 1)
     
-    # Calculate FMN for sentence1
-    import math
-    if Config.ISEC_FREQUENCY_SCALING_ENABLED:
-        log_base = Config.ISEC_FREQUENCY_LOG_BASE if Config.ISEC_FREQUENCY_LOG_BASE > 1 else math.e
-        f = max(freq1, 1e-10)
-        if log_base == math.e:
-            fmn = math.log(f) + 1
-        else:
-            fmn = math.log(f, log_base) + 1
-    else:
-        fmn = float(freq1)
+    # Calculate ISEC score for this individual pair using calculator logic if possible
+    # For pair-detail, we re-run the core logic to get all values
+    # Calculate pair-based numerator: 1 + log10(mean_freq_pair)
+    log_f1 = math.log10(max(freq1, 1.0))
+    pair_mean_freq = (freq1 + freq2) / 2.0
+    log_pair = math.log10(max(pair_mean_freq, 1.0))
     
-    # Calculate ISEC score for this pair
-    weighted_distance = (
-        global_calculator.semantic_weight * semantic_distance +
-        global_calculator.morphologic_weight * cost_result.penalized_distance
-    )
+    fmn_ratio_self = log_f1
+    fmn_ratio_pair = log_pair
     
-    if weighted_distance > 0:
-        isec_score = fmn / weighted_distance
-    else:
-        isec_score = float('inf')
+    numerator_self = 1.0 + log_f1
+    match_numerator = 1.0 + log_pair
+    
+    # Calculate ISEC score specifically for this pair (ds, dm)
+    ds = max(semantic_distance, 1e-6)
+    dm = max(cost_result.penalized_distance, 1e-6)
+    denominator = pow(ds, global_calculator.alpha) * pow(dm, 1.0 - global_calculator.alpha)
+    
+    isec_score = match_numerator / denominator if denominator > 0 else float('inf')
     
     # Format operations
     operations = []
@@ -476,8 +484,8 @@ async def get_pair_detail(req: PairDetailRequest):
     }
     
     return {
-        "sentence1": req.sentence1,
-        "sentence2": req.sentence2,
+        "sentence1": s1,
+        "sentence2": s2,
         "frequency1": freq1,
         "frequency2": freq2,
         "group1": global_calculator.metadata_map.get(req.sentence1, {}).get("group", "N/A"),
@@ -489,10 +497,15 @@ async def get_pair_detail(req: PairDetailRequest):
             "sum_edit_costs": cost_result.sum_edit_costs,
             "penalized": cost_result.penalized_distance
         },
-        "fmn": fmn,
+        "median_frequency": global_calculator.get_median_frequency(),
+        "max_frequency": global_calculator.max_frequency,
+        "raw_fmn": fmn_ratio_self, # For the source sentence
+        "raw_fmn_pair": fmn_ratio_pair, # For the pair
+        "fmn": numerator_self, # Scaled Numerator for source
+        "fmn_pair": match_numerator, # Scaled Numerator for pair
         "fmn_config": {
-            "log_base": Config.ISEC_FREQUENCY_LOG_BASE,
-            "scaling_enabled": Config.ISEC_FREQUENCY_SCALING_ENABLED
+            "log_base": 10,
+            "scaling_enabled": True
         },
         "isec_score": isec_score if isec_score != float('inf') else 0,
         "operations": operations,

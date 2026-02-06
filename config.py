@@ -91,7 +91,7 @@ class Config:
     COSTS_OPERATION_COLUMN = get_string_env("COSTS_OPERATION_COLUMN", None)
 
     # ISEC weight configuration (loaded from .env)
-    ISEC_SEMANTIC_WEIGHT = get_float_env("ISEC_SEMANTIC_WEIGHT", 0.4)
+    ISEC_ALPHA = get_float_env("ISEC_ALPHA", 0.4)
     ISEC_TOP_K_MATCHES = int(get_float_env("ISEC_TOP_K_MATCHES", 10))
     ISEC_OUTPUT_FILE = get_string_env("ISEC_OUTPUT_FILE", "ISEC_Results.xlsx")
 
@@ -126,6 +126,7 @@ class Config:
         print(f"  Custom Costs File: {cls.CUSTOM_COSTS_FILE}")
         print(f"  Same Group Exclusion: {cls.SAME_GROUP_EXCLUSION}")
         print(f"  Same Subgroup Exclusion: {cls.SAME_SUBGROUP_EXCLUSION}")
-        print(f"\n  Frequency Log Base: {cls.ISEC_FREQUENCY_LOG_BASE}")
+        print(f"\n  ISEC Alpha: {cls.ISEC_ALPHA}")
+        print(f"  Frequency Log Base: {cls.ISEC_FREQUENCY_LOG_BASE}")
         print(f"  Frequency Scaling Enabled: {cls.ISEC_FREQUENCY_SCALING_ENABLED}")
         print("=" * 60 + "\n")

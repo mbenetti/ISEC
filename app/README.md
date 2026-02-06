@@ -64,7 +64,7 @@ Returns current configuration parameters.
 **Response**:
 ```json
 {
-  "semantic_weight": 0.2,
+  "alpha": 0.2,
   "cost_factor": 0.2,
   "substitution": 1.1,
   "insertion": 1.3,
@@ -116,7 +116,7 @@ Calculate ISEC for a specific sentence.
 {
   "sentence": "Buenos Aires",
   "params": {
-    "semantic_weight": 0.2,
+    "alpha": 0.2,
     "cost_factor": 0.2,
     "substitution": 1.1,
     "insertion": 1.3,
@@ -248,7 +248,7 @@ Clicking on any matched sentence in the results table opens a detailed analysis 
 ### 4. Parameter Adjustment
 
 Real-time parameter controls:
-- **Semantic Weight**: Balance between semantic and morphological components
+- **Alpha (α)**: Balance between Semantic (α) and Morphologic (1-α) distances
 - **Penalization (k)**: Cost factor for edit distance
 - **Operation Costs**: Substitution, insertion, deletion, transposition
 - **Top Matches (k)**: Number of matches to display
@@ -299,13 +299,14 @@ Then open http://localhost:8000 in your browser.
 The ISEC metric measures how sensitive a sentence is to categorical errors:
 
 ```
-ISEC = FMN / (semantic_weight × SemanticDistance + morphologic_weight × CostDistance)
+ISEC = Numerator / (SemanticDistance^α × CostDistance^(1-α))
 ```
 
 Where:
-- **FMN**: Frequency Median Normalized (log-scaled frequency)
+- **Numerator**: $1 + \log_{10}(\text{MeanFrequency})$
 - **SemanticDistance**: Cosine distance between embeddings
 - **CostDistance**: Penalized edit distance
+- **α (Alpha)**: Geometric Mean exponent (bias)
 - **Higher ISEC**: More sensitive to errors (important to classify correctly)
 
 ### Sentence Pairs

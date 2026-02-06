@@ -15,14 +15,14 @@ ISEC (Índice de Sensibilidad al Error Categórico / Index of Sensitivity to Cat
 
 ISEC is calculated for each unique sentence-match pair (no aggregation across matches):
 
-$$\text{ISEC}_{\text{pair}} = \frac{\text{FMN}}{\text{semantic\_weight} \times \text{SemanticDistance} + \text{morphologic\_weight} \times \text{CostDistance}}$$
+$$\text{ISEC}_{\text{pair}} = \frac{1 + \log_{10}(FM_{pair})}{DS^\alpha \cdot DM^{1-\alpha}}$$
 
 Where:
-- **FMN** (Frequency Median Normalized) = `frequency / median(all_frequencies)`
-- **SemanticDistance** = Semantic distance between the query sentence and a specific match
-- **CostDistance** = Penalized edit distance between the query sentence and a specific match
-- **semantic_weight** = Weight for semantic component (0.0-1.0, configurable)
-- **morphologic_weight** = Weight for morphological component (1.0 - semantic_weight)
+- **Numerator** = $1 + \log_{10}(\text{Mean}(Freq_{source}, Freq_{match}))$
+- **DS (SemanticDistance)** = Semantic distance (0.0-1.0)
+- **DM (CostDistance)** = Penalized edit distance (normalized)
+- **$\alpha$ (Alpha)** = Exponent controlling balance (0.0-1.0)
+- **Denominator** = Geometric Mean of DS and DM weighted by $\alpha$
 
 **Note:** ISEC is applied to different categories only. Each sentence is unique within its category, so there is no chance of zero values in any component.
 
@@ -33,8 +33,8 @@ All parameters are defined in `.env` file and loaded automatically.
 ### Default Configuration (.env)
 
 ```dotenv
-# ISEC Weight Configuration
-ISEC_SEMANTIC_WEIGHT=0.4          # Semantic weight (40% semantic, 60% morphologic)
+# ISEC Alpha Configuration
+ISEC_ALPHA=0.2                    # Geometric Mean exponent (0.2 = heavy morphologic bias)
 ISEC_TOP_K_MATCHES=3              # Number of top semantic matches to compare
 ISEC_OUTPUT_FILE=ISEC_Results.xlsx # Output Excel filename
 
@@ -70,9 +70,11 @@ SAME_SUBGROUP_EXCLUSION=False     # Set to True to exclude matches within the sa
 
 ### Key Parameters
 
-- **ISEC_SEMANTIC_WEIGHT** - Semantic distance weight (0.0 = 100% morphologic, 1.0 = 100% semantic)
-  - Example: 0.4 means 40% semantic, 60% morphologic
-  - Adjust to balance semantic vs. character-level analysis
+- **ISEC_ALPHA** - Geometric Mean exponent (0.0 to 1.0)
+  - **$\alpha = 0.5$**: Equal sensitivity to Semantic and Morphological distance.
+  - **$\alpha > 0.5$**: Higher sensitivity to Semantic Distance (DS). Small changes in meaning cause larger score drops.
+  - **$\alpha < 0.5$**: Higher sensitivity to Morphological Distance (DM). Small typos cause larger score drops.
+  - **Example**: `0.2` puts more emphasis on morphological exactness (typos matter more).
 
 - **ISEC_TOP_K_MATCHES** - Number of closest semantic neighbors to compare
   - Higher values → more matches analyzed but slower computation
@@ -143,11 +145,11 @@ ollama pull embeddinggemma
 Required columns: `Name`, `Frequency`
 Optional columns: `Group`, `Subgroup` (for filtering and analysis)
 
-| Name | Frequency | Group | Subgroup |
-|------|-----------|-------|----------|
-| XDKT11T3 | 1 | Group_A | Sub_A1 |
-| XDKG11T3 | 2 | Group_A | Sub_A2 |
-| LDKT11T3 | 1 | Group_B | Sub_B1 |
+| Name     | Frequency | Group   | Subgroup |
+| -------- | --------- | ------- | -------- |
+| XDKT11T3 | 1         | Group_A | Sub_A1   |
+| XDKG11T3 | 2         | Group_A | Sub_A2   |
+| LDKT11T3 | 1         | Group_B | Sub_B1   |
 
 **Column descriptions:**
 - **Name** - The sentence/identifier to analyze
@@ -158,10 +160,10 @@ Optional columns: `Group`, `Subgroup` (for filtering and analysis)
 #### Costo_Personalizado.xlsx (Custom Costs File - Optional)
 Required columns: `Character1`, `Character2`, `Cost`, (optional) `Operation`
 
-| Character1 | Character2 | Cost | Operation |
-|-----------|-----------|------|-----------|
-| D | X | 0.5 | substitution |
-| G | T | 0.5 | substitution |
+| Character1 | Character2 | Cost | Operation    |
+| ---------- | ---------- | ---- | ------------ |
+| D          | X          | 0.5  | substitution |
+| G          | T          | 0.5  | substitution |
 
 ### 3. Run the Calculator
 
@@ -174,7 +176,7 @@ python ISEC.py
 ```
 
 The script will:
-1. Display configuration (semantic weight, morphologic weight, top k matches, output file)
+1. Display configuration (alpha, top k matches, output file)
 2. Load sentences and frequencies from Excel
 3. Initialize semantic and cost calculators
 4. Calculate ISEC metrics for each sentence-match pair
@@ -205,7 +207,8 @@ calculator.export_to_excel(results, "ISEC_Results.xlsx")
 # Override configuration
 calculator = ISECCalculator(
     sentences_file="MyData.xlsx",
-    semantic_weight=0.5,  # 50% semantic, 50% morphologic
+    alpha=0.5,  # 0.5 = Balanced Geometric Mean
+
 )
 
 # Calculate for single sentence
@@ -225,7 +228,7 @@ ISEC (Índice de Sensibilidad al Error Categórico) Analysis
 'XDKT11T3'
 ----------------------------------------------------------------------------------------------------
   Frequency: 1
-  Frequency Median Normalized (FMN): 1.0000
+  Numerator (1 + log10): 1.0000
   Group: Group_A
 
   Top 2 Semantic Matches with ISEC Scores:
@@ -242,7 +245,7 @@ Summary Statistics
 
   Total sentences analyzed: 3
   Total match pairs analyzed: 6
-  FMN (Frequency Median Normalized):
+  Pair Numerator (1 + log10):
     Average: 1.1111
     Min: 1.0000
     Max: 1.2500
@@ -257,12 +260,12 @@ Summary Statistics
 
 **ISEC_Results.xlsx** - One row per top k match for detailed analysis:
 
-| Sentence | Sentence_Group | Frequency | FMN | Match_Rank | Matched_Sentence | Matched_Sentence_Group | Matched_Frequency | Semantic_Distance | Cost_Distance | ISEC_Score |
-|----------|----------------|-----------|-----|-----------|-----------------|----------------------|------------------|-------------------|---------------|------------|
-| XDKT11T3 | Group_A | 1 | 1.0 | 1 | XDKG11T3 | Group_A | 2 | 0.2345 | 0.5000 | 1.2500 |
-| XDKT11T3 | Group_A | 1 | 1.0 | 2 | LDKT11T3 | Group_B | 3 | 0.4567 | 1.5000 | 0.8750 |
-| XDKG11T3 | Group_A | 2 | 1.25 | 1 | XDKT11T3 | Group_A | 1 | 0.2345 | 0.5000 | 1.5625 |
-| XDKG11T3 | Group_A | 2 | 1.25 | 2 | LDKT11T3 | Group_B | 3 | 0.3456 | 1.0000 | 1.3750 |
+| Sentence | Sentence_Group | Frequency | FMN  | Match_Rank | Matched_Sentence | Matched_Sentence_Group | Matched_Frequency | Semantic_Distance | Cost_Distance | ISEC_Score |
+| -------- | -------------- | --------- | ---- | ---------- | ---------------- | ---------------------- | ----------------- | ----------------- | ------------- | ---------- |
+| XDKT11T3 | Group_A        | 1         | 1.0  | 1          | XDKG11T3         | Group_A                | 2                 | 0.2345            | 0.5000        | 1.2500     |
+| XDKT11T3 | Group_A        | 1         | 1.0  | 2          | LDKT11T3         | Group_B                | 3                 | 0.4567            | 1.5000        | 0.8750     |
+| XDKG11T3 | Group_A        | 2         | 1.25 | 1          | XDKT11T3         | Group_A                | 1                 | 0.2345            | 0.5000        | 1.5625     |
+| XDKG11T3 | Group_A        | 2         | 1.25 | 2          | LDKT11T3         | Group_B                | 3                 | 0.3456            | 1.0000        | 1.3750     |
 
 **Key features:**
 - Each row represents one independent ISEC calculation for a specific sentence-match pair
@@ -287,7 +290,7 @@ class ISECCalculator:
         custom_costs_file: str = None,
         ollama_host: str = None,
         embedding_model: str = None,
-        semantic_weight: float = None,
+        alpha: float = None,
     )
 ```
 
@@ -364,7 +367,7 @@ The Excel export provides individual ISEC scores for each sentence-match pair:
 
 ### ISEC Score Meaning
 
-**Formula: ISEC = FMN / (semantic_weight × SemanticDistance + morphologic_weight × CostDistance)**
+**Formula: ISEC = (1 + log10(MeanFreq)) / (DS^α × DM^(1-α))**
 
 ISEC measures the **sensitivity to categorical error** for each unique sentence-match pair:
 
@@ -402,6 +405,29 @@ Use Excel columns to analyze:
 - **Cost_Distance trends** - Morphological similarity patterns
 - **High ISEC sentences** - Common structural patterns with high error risk
 - **Low ISEC sentences** - Unique/rare structural patterns with low error risk
+
+### Frequency Calculation Example
+The numerator is calculated using the Base-10 Logarithm of the **pair's mean frequency**:
+$$Numerator = 1 + \log_{10}\left(\frac{F_{source} + F_{match}}{2}\right)$$
+
+**Examples:**
+1. **Rare Pair:**
+   - Source Freq = 1, Match Freq = 1
+   - Mean = 1.0
+   - $\log_{10}(1) = 0$
+   - **Numerator = 1.0**
+
+2. **Mixed Pair:**
+   - Source Freq = 1, Match Freq = 100
+   - Mean = 50.5
+   - $\log_{10}(50.5) \approx 1.703$
+   - **Numerator = 2.703**
+
+3. **High Frequency Pair:**
+   - Source Freq = 1000, Match Freq = 1000
+   - Mean = 1000
+   - $\log_{10}(1000) = 3$
+   - **Numerator = 4.0**
 
 ## Performance Considerations
 
@@ -511,13 +537,12 @@ INPUT:
     - sentence: The target sentence to analyze
     - frequency: How often this sentence appears
     - top_k: Number of closest semantic neighbors to compare
-    - semantic_weight: Weight for semantic component (0.0-1.0)
-    - morphologic_weight: Weight for morphological component (1.0 - semantic_weight)
+    - alpha: Geometric Mean exponent (0.0-1.0)
 
 PROCESS:
-    1. Calculate FMN (Frequency Median Normalized)
-       median_frequency = median(all_sentence_frequencies)
-       FMN = frequency / median_frequency
+    1. Calculate Pair Numerator
+       mean_freq = (frequency + match_frequency) / 2
+       Numerator = 1 + log10(mean_freq)
     
     2. Find top K closest semantic matches (by embedding similarity)
        top_k_matches = []
@@ -531,9 +556,8 @@ PROCESS:
               cost_distance = penalized_levenshtein_distance(sentence, match)
            
            b. Calculate ISEC for this specific pair
-              weighted_distance = semantic_weight × semantic_dist + 
-                                 morphologic_weight × cost_distance
-              isec_score = FMN / weighted_distance
+              denominator = pow(semantic_dist, alpha) * pow(cost_distance, 1-alpha)
+              isec_score = Numerator / denominator
            
            c. Store match data: (matched_sentence, semantic_dist, cost_dist, isec_score)
            d. Output individual ISEC score for this pair (no aggregation)
@@ -555,22 +579,24 @@ INPUT:
     - s: target sentence
     - freq(s): frequency of sentence s
     - k: number of top matches
-    - α: semantic weight (0 ≤ α ≤ 1)
+    - α: Alpha bias (0 ≤ α ≤ 1)
 
 OUTPUT:
     - List of ISEC scores, one per match
 
 BEGIN:
-    1. median_freq ← median({freq(s') | s' ∈ S})
-    2. FMN ← freq(s) / median_freq
+    1. M ← FindTopKSemanticMatches(s, S, k)
     
-    3. M ← FindTopKSemanticMatches(s, S, k)
-    
-    4. FOR each match m ∈ M:
+    2. FOR each match m ∈ M:
+           mean_freq ← (freq(s) + freq(m)) / 2
+           numerator ← 1 + log10(mean_freq)
+           
            d_sem(m) ← SemanticDistance(s, m)
            d_cost(m) ← PenalizedEditDistance(s, m)
-           isec_m ← FMN / (α·d_sem(m) + (1-α)·d_cost(m))
-           OUTPUT isec_m  // Individual score for this pair
+           
+           denominator ← (d_sem(m)^α) * (d_cost(m)^(1-α))
+           isec_m ← numerator / denominator
+           OUTPUT isec_m
        END FOR
 END
 ```
@@ -581,7 +607,7 @@ END
 \begin{algorithm}
 \caption{ISEC: Índice de Sensibilidad al Error Categórico Calculator}
 \begin{algorithmic}[1]
-\Require{sentences $S = \{s_1, s_2, \ldots, s_n\}$ with frequencies $\text{freq}(s_i)$; target sentence $s$; top-k matches $k$; semantic weight $\alpha \in [0,1]$}
+\Require{sentences $S = \{s_1, s_2, \ldots, s_n\}$ with frequencies $\text{freq}(s_i)$; target sentence $s$; top-k matches $k$; Alpha bias $\alpha \in [0,1]$}
 \Ensure{List of ISEC scores, one per sentence-match pair}
 
 \State $\text{median\_freq} \gets \text{median}(\{\text{freq}(s') \mid s' \in S\})$
@@ -590,11 +616,12 @@ END
 \State $\mathcal{M} \gets \text{FindTopKSemanticMatches}(s, S, k)$
 
 \For{each match $m \in \mathcal{M}$}
+    \State $\text{num} \gets 1 + \log_{10}((\text{freq}(s) + \text{freq}(m))/2)$
     \State $d_{\text{sem}}(m) \gets \text{SemanticDistance}(s, m)$
     \State $d_{\text{cost}}(m) \gets \text{PenalizedEditDistance}(s, m)$
-    \State $d_{\text{weighted}}(m) \gets \alpha \cdot d_{\text{sem}}(m) + (1-\alpha) \cdot d_{\text{cost}}(m)$
-    \State $\text{ISEC}(s, m) \gets \text{FMN} / d_{\text{weighted}}(m)$
-    \State \textbf{output} $\text{ISEC}(s, m)$  \Comment{Individual pair score}
+    \State $d_{\text{geom}} \gets d_{\text{sem}}(m)^{\alpha} \cdot d_{\text{cost}}(m)^{1-\alpha}$
+    \State $\text{ISEC}(s, m) \gets \text{num} / d_{\text{geom}}$
+    \State \textbf{output} $\text{ISEC}(s, m)$
 \EndFor
 
 \end{algorithmic}
@@ -662,7 +689,6 @@ END
 STRUCTURE: ISECResult
     sentence: str                                           // Input sentence
     frequency: int                                          // Frequency of sentence
-    frequency_median_normalized: float                      // FMN value
     top_k_matches: List[Tuple[str, float, float, float]]   // (sentence, semantic_dist, cost_dist, isec_score)
     // Note: Each match has its own independent ISEC score
     // No averaging is performed across matches

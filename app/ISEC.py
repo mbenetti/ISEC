@@ -28,10 +28,13 @@ class ISECResult:
 
     sentence: str
     frequency: int
-    frequency_median_normalized: float
+    median_frequency: float
+    max_frequency: int
+    raw_fmn: float
+    frequency_median_normalized: float  # This is the SCALED numerator
     top_k_matches: List[
-        Tuple[str, float, float, float, Dict]
-    ]  # (sentence, semantic_dist, cost_dist, isec_score, metadata)
+        Tuple[str, float, float, float, Dict, float]
+    ]  # (sentence, semantic_dist, cost_dist, isec_score, metadata, pair_numerator)
 
 
 class ISECCalculator:
@@ -54,7 +57,7 @@ class ISECCalculator:
         custom_costs_file: str = None,
         ollama_host: str = None,
         embedding_model: str = None,
-        semantic_weight: float = None,
+        alpha: float = None,
         source_filter: str = None, # New filter
     ):
         """
@@ -65,24 +68,24 @@ class ISECCalculator:
             custom_costs_file: Path to Excel file with custom costs
             ollama_host: Ollama server host
             embedding_model: Ollama embedding model name
-            semantic_weight: Weight for semantic distance (0.0-1.0). Morphologic weight = 1.0 - semantic_weight
+            alpha: Geometric Mean exponent (0.0-1.0). Controls balance between Semantic (alpha) and Morphologic (1-alpha).
             source_filter: Optional source name (e.g. "Clases.xlsx") to restrict semantic search
         """
         self.sentences_file = sentences_file if sentences_file is not None else Config.SENTENCES_FILE
         self.custom_costs_file = custom_costs_file or Config.CUSTOM_COSTS_FILE
         self.ollama_host = ollama_host or Config.OLLAMA_HOST
         self.embedding_model = embedding_model or Config.OLLAMA_EMBEDDING_MODEL
-        self.semantic_weight = (
-            semantic_weight
-            if semantic_weight is not None
-            else Config.ISEC_SEMANTIC_WEIGHT
+        self.alpha = (
+            alpha
+            if alpha is not None
+            else Config.ISEC_ALPHA
         )
-        self.morphologic_weight = 1.0 - self.semantic_weight
         self.source_filter = source_filter
 
         # Load sentences and frequencies
         self.sentences = []
         self.frequencies = {}
+        self.max_frequency = 1
         self.metadata_map = {} # Store full metadata keyed by sentence
         
         # Initialize calculators
@@ -116,6 +119,7 @@ class ISECCalculator:
                 sentence: metadata.get("frequency", 1)
                 for sentence, metadata in zip(self.sentences, metadata_list)
             }
+            self.max_frequency = max(self.frequencies.values()) if self.frequencies else 1
             print(
                 f"✓ Loaded {len(self.sentences)} sentences from {self.sentences_file}"
             )
@@ -186,30 +190,14 @@ class ISECCalculator:
              print(f"✓ Semantic calculator initialized (empty dataset)")
         print(f"✓ Semantic calculator initialized")
 
-    def calculate_frequency_median_normalized(self) -> float:
+    def get_median_frequency(self) -> float:
         """
-        Calculate the median frequency value (scaled if enabled).
+        Calculate the median frequency value of the entire collection.
+        This is used for normalization in the ISEC formula.
         """
         freq_values = list(self.frequencies.values())
         if not freq_values:
             return 1.0
-
-        # Apply log scaling to frequencies if enabled
-        if Config.ISEC_FREQUENCY_SCALING_ENABLED:
-            log_base = (
-                Config.ISEC_FREQUENCY_LOG_BASE
-                if Config.ISEC_FREQUENCY_LOG_BASE > 1
-                else math.e
-            )
-            scaled_freq_values = []
-            for freq in freq_values:
-                f = max(freq, 1e-10)
-                if log_base == math.e:
-                    scaled_freq = math.log(f) + 1
-                else:
-                    scaled_freq = math.log(f, log_base) + 1
-                scaled_freq_values.append(scaled_freq)
-            freq_values = scaled_freq_values
         
         return statistics.median(freq_values)
 
@@ -284,33 +272,20 @@ class ISECCalculator:
         top_k_semantic = self.find_top_k_semantic_sentences(
             sentence, top_k
         )
-
-        # Calculate FMN according to user requirement: Freq=1 => FMN=1
-        if Config.ISEC_FREQUENCY_SCALING_ENABLED:
-            log_base = (
-                Config.ISEC_FREQUENCY_LOG_BASE
-                if Config.ISEC_FREQUENCY_LOG_BASE > 1
-                else math.e
-            )
-            f = max(frequency, 1e-10)
-            if log_base == math.e:
-                scaled_frequency = math.log(f) + 1
-            else:
-                scaled_frequency = math.log(f, log_base) + 1
-            
-            # Anchor at scaled_frequency of 1 for Frequency=1
-            fmn = scaled_frequency
-        else:
-            median_freq = self.calculate_frequency_median_normalized()
-            # In linear case, if user wants Freq=1 => FMN=1, we just use the frequency
-            fmn = float(frequency)
+        # Calculate ISEC numerator for the sentence itself (for display/reference)
+        # Requirement: Numerator = 1 + log10(Freq)
+        log_f = math.log10(max(frequency, 1.0))
+        numerator_self = 1.0 + log_f
 
         if not top_k_semantic:
             # No matches found
             return ISECResult(
                 sentence=sentence,
                 frequency=frequency,
-                frequency_median_normalized=fmn,
+                median_frequency=self.get_median_frequency(),
+                max_frequency=self.max_frequency,
+                raw_fmn=log_f, # Now just log10(Freq)
+                frequency_median_normalized=numerator_self,
                 top_k_matches=[],
             )
 
@@ -324,24 +299,37 @@ class ISECCalculator:
             )
             cost_dist = cost_result.penalized_distance
 
-            # Calculate ISEC for this individual match
-            match_weighted_distance = (
-                self.semantic_weight * semantic_dist
-                + self.morphologic_weight * cost_dist
-            )
-            if match_weighted_distance > 0:
-                match_isec = fmn / match_weighted_distance
+            # Calculate pair-based numerator: 1 + log10(mean_freq_pair)
+            matched_freq = metadata.get("frequency", 1)
+            pair_mean_freq = (frequency + matched_freq) / 2.0
+            log_pair = math.log10(max(pair_mean_freq, 1.0))
+            match_numerator = 1.0 + log_pair
+
+            # Calculate ISEC for this individual match using Weighted Geometric Mean
+            # ISEC = MatchNumerator / (DS^alpha * DM^(1-alpha))
+            
+            # Protection against zero distances
+            ds = max(semantic_dist, 1e-6)
+            dm = max(cost_dist, 1e-6)
+            
+            denominator = pow(ds, self.alpha) * pow(dm, 1.0 - self.alpha)
+            
+            if denominator > 0:
+                match_isec = match_numerator / denominator
             else:
                 match_isec = float("inf")
 
             top_k_matches.append(
-                (matched_sentence, semantic_dist, cost_dist, match_isec, metadata)
+                (matched_sentence, semantic_dist, cost_dist, match_isec, metadata, match_numerator)
             )
 
         return ISECResult(
             sentence=sentence,
             frequency=frequency,
-            frequency_median_normalized=fmn,
+            median_frequency=self.get_median_frequency(),
+            max_frequency=self.max_frequency,
+            raw_fmn=log_f,
+            frequency_median_normalized=numerator_self,
             top_k_matches=top_k_matches,
         )
 
@@ -358,7 +346,7 @@ class ISECCalculator:
                 res = self.calculate_isec(sentence, freq, k=k)
                 
                 # Get the best match (highest ISEC score)
-                # top_k_matches is a list of tuples: (sentence, semantic_dist, cost_dist, match_isec, metadata)
+                # top_k_matches is a list of tuples: (sentence, semantic_dist, cost_dist, match_isec, metadata, pair_numerator)
                 if res.top_k_matches and len(res.top_k_matches) > 0:
                     # Find the match with the highest ISEC score (index 3 in tuple)
                     best_match = max(res.top_k_matches, key=lambda x: x[3])
