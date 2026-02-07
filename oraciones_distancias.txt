@@ -2,7 +2,7 @@
 Semantic Distance Calculator with Ollama Embeddings
 ================================================================================
 
-Loaded 3 sentences from Sentences.xlsx
+Loaded 3 sentences from app/data/Sentences.xlsx
 Sentences: ['Limpia tapicería en espuma Binner', 'Limpia tapicería y alfombras Binner', 'Limpiador Dr. Beckmann alfombras 2 en 1 poder oxi x 650 ml']
 
 Initialized SemanticDistanceCalculator

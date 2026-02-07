@@ -238,32 +238,17 @@ class ISECCalculator:
             sentence, Config.ISEC_TOP_K_MATCHES
         )
 
-        # Calculate FMN according to user requirement: FMN = frequency / median
-        median_freq = self.calculate_frequency_median_normalized()
-        fmn_raw = frequency / median_freq if median_freq > 0 else float(frequency)
-
-        if Config.ISEC_FREQUENCY_SCALING_ENABLED:
-            log_base = (
-                Config.ISEC_FREQUENCY_LOG_BASE
-                if Config.ISEC_FREQUENCY_LOG_BASE > 1
-                else math.e
-            )
-            fmn_raw_clamped = max(fmn_raw, 1e-10)
-            if log_base == math.e:
-                numerator = math.log(fmn_raw_clamped) + 1
-            else:
-                numerator = math.log(fmn_raw_clamped, log_base) + 1
-        else:
-            numerator = fmn_raw
-
-        fmn = numerator # For backward compatibility in result object naming
+        # Calculate ISEC numerator for the sentence itself (for display/reference)
+        # Requirement: Numerator = 1 + log10(Freq)
+        log_f = math.log10(max(frequency, 1.0))
+        numerator_self = 1.0 + log_f
 
         if not top_k_semantic:
             # No matches found
             return ISECResult(
                 sentence=sentence,
                 frequency=frequency,
-                frequency_median_normalized=fmn,
+                frequency_median_normalized=numerator_self,
                 top_k_matches=[],
             )
 
@@ -277,6 +262,12 @@ class ISECCalculator:
             )
             cost_dist = cost_result.penalized_distance
 
+            # Calculate pair-based numerator: 1 + log10(mean_freq_pair)
+            matched_freq = metadata.get("frequency", 1)
+            pair_mean_freq = (frequency + matched_freq) / 2.0
+            log_pair = math.log10(max(pair_mean_freq, 1.0))
+            match_numerator = 1.0 + log_pair
+
             # Calculate ISEC for this individual match using Weighted Geometric Mean
             # ISEC = Numerator / (DS^alpha * DM^(1-alpha))
             
@@ -287,7 +278,7 @@ class ISECCalculator:
             denominator = pow(ds, self.alpha) * pow(dm, 1.0 - self.alpha)
             
             if denominator > 0:
-                match_isec = numerator / denominator
+                match_isec = match_numerator / denominator
             else:
                 match_isec = float("inf")
 
@@ -298,7 +289,7 @@ class ISECCalculator:
         return ISECResult(
             sentence=sentence,
             frequency=frequency,
-            frequency_median_normalized=fmn,
+            frequency_median_normalized=numerator_self,
             top_k_matches=top_k_matches,
         )
 

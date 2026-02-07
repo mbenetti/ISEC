@@ -434,8 +434,8 @@ async def get_pair_detail(req: PairDetailRequest):
         try:
             # We must use the same method as find_similar but for a specific pair
             # Calculate embedding only if needed (assuming cache handles it)
-            dist = global_calculator.semantic_calculator.calculate_distance(s1, s2)
-            semantic_distance = dist
+            result = global_calculator.semantic_calculator.calculate_semantic_distance(s1, s2)
+            semantic_distance = result.normalized_distance
         except Exception as e:
             print(f"Error calculating direct distance: {e}")
             semantic_distance = 1.0 # Worst case fallback

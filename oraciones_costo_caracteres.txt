@@ -7,17 +7,18 @@ Configuration
   Default Deletion Cost: 1.3
   Default Transposition Cost: 0.5
 
-  Sentences File: Sentences.xlsx
+  Sentences File: app/data/Sentences.xlsx
   Custom Costs File: Costo_Personalizado.xlsx
   Same Group Exclusion: True
   Same Subgroup Exclusion: True
 
+  ISEC Alpha: 0.5
   Frequency Log Base: 10.0
   Frequency Scaling Enabled: True
 ============================================================
 
 
-Loaded 3 sentences from Sentences.xlsx
+Loaded 3 sentences from app/data/Sentences.xlsx
 ================================================================================
 Levenshtein-Damerau Distance Calculator with Custom Operation Costs
 ================================================================================
