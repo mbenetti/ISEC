@@ -469,8 +469,14 @@ def main():
         results = calculator.calculate_all_isec()
         end_time = time.time()
         elapsed_time = end_time - start_time
-        print(f"\nProcessing complete in {elapsed_time:.2f} seconds.")
-        print(f"Processed {len(calculator.sentences) if hasattr(calculator, 'sentences') else len(results)} items.")
+        
+        num_items = len(calculator.sentences) if hasattr(calculator, 'sentences') else len(results)
+        per_item_time = elapsed_time / num_items if num_items > 0 else 0
+        
+        print(f"\nProcessing Complete:")
+        print(f"  Total Time: {elapsed_time:.4f} seconds")
+        print(f"  Per Item:   {per_item_time:.4f} seconds/item")
+        print(f"  Processed:  {num_items} items")
 
     except Exception as e:
         print(f"✗ Error calculating ISEC: {e}")

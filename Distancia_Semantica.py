@@ -638,6 +638,8 @@ def main():
     )
 
     # Load sentences and generate embeddings
+    import time
+    embedding_start_time = time.time()
     try:
         calculator.load_sentences(sentences, metadata_list)
     except Exception as e:
@@ -645,18 +647,30 @@ def main():
         print("Make sure Ollama is running with the embeddinggemma model:")
         print("  ollama run embeddinggemma")
         return
+    embedding_end_time = time.time()
+    embedding_time = embedding_end_time - embedding_start_time
+    embedding_per_item = embedding_time / len(sentences) if sentences else 0
+
+    print(f"\nEmbedding Generation Complete:")
+    print(f"  Total Time: {embedding_time:.4f} seconds")
+    print(f"  Per Item:   {embedding_per_item:.4f} seconds/item")
 
     # Calculate distances between all pairs
     print("\n" + "=" * 80)
     print("Calculating semantic distances...")
     print("=" * 80)
-    import time
-    start_time = time.time()
+    
+    processing_start_time = time.time()
     results = calculator.calculate_all_distances(sentences)
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    print(f"\nProcessing complete in {elapsed_time:.2f} seconds.")
-    print(f"Processed {len(sentences)} items.")
+    processing_end_time = time.time()
+    processing_time = processing_end_time - processing_start_time
+    processing_per_item = processing_time / len(sentences) if sentences else 0
+
+    print(f"\nProcessing Complete:")
+    print(f"  Total Time: {processing_time:.4f} seconds")
+    print(f"  Per Item:   {processing_per_item:.4f} seconds/item")
+    print(f"  Processed:  {len(sentences)} items")
+
 
     # Print results
     calculator.print_batch_results(results)
