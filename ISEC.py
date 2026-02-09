@@ -464,7 +464,14 @@ def main():
     # Calculate ISEC for all sentences
     print("\nCalculating ISEC metrics...")
     try:
+        import time
+        start_time = time.time()
         results = calculator.calculate_all_isec()
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"\nProcessing complete in {elapsed_time:.2f} seconds.")
+        print(f"Processed {len(calculator.sentences) if hasattr(calculator, 'sentences') else len(results)} items.")
+
     except Exception as e:
         print(f"✗ Error calculating ISEC: {e}")
         return

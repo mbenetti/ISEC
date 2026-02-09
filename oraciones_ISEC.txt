@@ -11,104 +11,16 @@ Configuration
   Default Deletion Cost: 1.3
   Default Transposition Cost: 0.5
 
-  Sentences File: app/data/Sentences.xlsx
+  Sentences File: provincias.xlsx
   Custom Costs File: Costo_Personalizado.xlsx
   Same Group Exclusion: True
   Same Subgroup Exclusion: True
 
-  ISEC Alpha: 0.5
+  ISEC Alpha: 0.4
   Frequency Log Base: 10.0
   Frequency Scaling Enabled: True
 ============================================================
 
-✓ Loaded 3 sentences from app/data/Sentences.xlsx
-✓ Cost calculator initialized
-Initialized SemanticDistanceCalculator
-  Ollama Host: http://localhost:11434
-  Embedding Model: embeddinggemma
-  Collection: isec_sentences
-
-Generating embeddings for 3 sentences...
-  ✓ Embedded sentence 1/3: Limpia tapicería en espuma Binner...
-  ✓ Embedded sentence 2/3: Limpia tapicería y alfombras Binner...
-  ✓ Embedded sentence 3/3: Limpiador Dr. Beckmann alfombras 2 en 1 poder oxi ...
-
-Loaded 3 embeddings into Chroma collection
-✓ Semantic calculator initialized
-
-ISEC Configuration:
-  Alpha (Semantic): 50.0%
-  (1 - Alpha) (Morphologic): 50.0%
-  Top K Matches: 10
-  Output File: ISEC_Results.xlsx
-
-Calculating ISEC metrics...
-
-====================================================================================================
-ISEC (Índice de Sensibilidad al Error Categórico) Analysis
-====================================================================================================
-
-'Limpia tapicería en espuma Binner'
-------------------------------------------------------------------------------------------------------------------------
-  Frequency: 100
-  Frequency Median Normalized (FMN): 3.0000
-  Group: N/A
-
-  Top 2 Semantic Matches with ISEC Scores:
-    1. 'Limpia tapicería y alfombras Binner'
-       Semantic Distance: 0.0751  |  Cost Distance: 3.3289  |  ISEC: 5.7489  |  Group: N/A  |  Frequency: 50
-    2. 'Limpiador Dr. Beckmann alfombras 2 en 1 poder oxi x 650 ml'
-       Semantic Distance: 0.2560  |  Cost Distance: 11.2248  |  ISEC: 1.6167  |  Group: N/A  |  Frequency: 10
-
-  Weights: alpha=50.0%, (1-alpha)=50.0%
-
-'Limpia tapicería y alfombras Binner'
-------------------------------------------------------------------------------------------------------------------------
-  Frequency: 50
-  Frequency Median Normalized (FMN): 2.6990
-  Group: N/A
-
-  Top 2 Semantic Matches with ISEC Scores:
-    1. 'Limpia tapicería en espuma Binner'
-       Semantic Distance: 0.0751  |  Cost Distance: 3.3289  |  ISEC: 5.7489  |  Group: N/A  |  Frequency: 100
-    2. 'Limpiador Dr. Beckmann alfombras 2 en 1 poder oxi x 650 ml'
-       Semantic Distance: 0.2454  |  Cost Distance: 9.6143  |  ISEC: 1.6127  |  Group: N/A  |  Frequency: 10
-
-  Weights: alpha=50.0%, (1-alpha)=50.0%
-
-'Limpiador Dr. Beckmann alfombras 2 en 1 poder oxi x 650 ml'
-------------------------------------------------------------------------------------------------------------------------
-  Frequency: 10
-  Frequency Median Normalized (FMN): 2.0000
-  Group: N/A
-
-  Top 2 Semantic Matches with ISEC Scores:
-    1. 'Limpia tapicería y alfombras Binner'
-       Semantic Distance: 0.2454  |  Cost Distance: 9.6143  |  ISEC: 1.6127  |  Group: N/A  |  Frequency: 50
-    2. 'Limpia tapicería en espuma Binner'
-       Semantic Distance: 0.2560  |  Cost Distance: 11.2248  |  ISEC: 1.6167  |  Group: N/A  |  Frequency: 100
-
-  Weights: alpha=50.0%, (1-alpha)=50.0%
-
-====================================================================================================
-Summary Statistics
-====================================================================================================
-
-  Total sentences analyzed: 3
-  Total match pairs analyzed: 6
-  FMN (Frequency Median Normalized):
-    Average: 2.5663
-    Min: 2.0000
-    Max: 3.0000
-  ISEC Scores (per match pair):
-    Average: 2.9928
-    Min: 1.6127
-    Max: 5.7489
-  ISEC Scores (per match pair):
-    Average: 2.9928
-    Min: 1.6127
-    Max: 5.7489
-    Median: 1.6167
-====================================================================================================
-
-✓ Results exported to ISEC_Results.xlsx (6 rows)
+Error: Excel file 'provincias.xlsx' not found
+✗ Excel file 'provincias.xlsx' not found
+✗ Error initializing calculator: [Errno 2] No such file or directory: 'provincias.xlsx'

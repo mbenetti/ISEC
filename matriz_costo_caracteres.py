@@ -887,7 +887,13 @@ def main():
     calculator.show_custom_costs()
 
     # Calculate distances between all pairs
+    import time
+    start_time = time.time()
     results = calculator.calculate_all_distances(sentences)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"\nProcessing complete in {elapsed_time:.2f} seconds.")
+    print(f"Processed {len(sentences)} items.")
 
     # Print results
     calculator.print_batch_results(results)
