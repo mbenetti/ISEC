@@ -300,8 +300,10 @@ ISEC Configuration:
 
 Calculating ISEC metrics...
 
-Processing complete in 2.35 seconds.
-Processed 259 items.
+Processing Complete:
+  Total Time: 2.1347 seconds
+  Per Item:   0.0082 seconds/item
+  Processed:  259 items
 
 ====================================================================================================
 ISEC (Índice de Sensibilidad al Error Categórico) Analysis
