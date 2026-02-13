@@ -1,0 +1,100 @@
+================================================================================
+Semantic Distance Calculator with Ollama Embeddings
+================================================================================
+
+Loaded 3 sentences from app/data/Sentences.xlsx
+Sentences: ['Limpia tapicería en espuma Binner', 'Limpia tapicería y alfombras Binner', 'Limpiador Dr. Beckmann alfombras 2 en 1 poder oxi x 650 ml']
+
+Initialized SemanticDistanceCalculator
+  Ollama Host: http://localhost:11434
+  Embedding Model: embeddinggemma
+  Collection: sentences
+
+Generating embeddings for 3 sentences...
+  ✓ Embedded sentence 1/3: Limpia tapicería en espuma Binner...
+  ✓ Embedded sentence 2/3: Limpia tapicería y alfombras Binner...
+  ✓ Embedded sentence 3/3: Limpiador Dr. Beckmann alfombras 2 en 1 poder oxi ...
+
+Loaded 3 embeddings into Chroma collection
+
+================================================================================
+Calculating semantic distances...
+================================================================================
+Calculated pair 1/3
+Calculated pair 2/3
+Calculated pair 3/3
+
+================================================================================
+Semantic Distance Results for All Pairs
+================================================================================
+
+'Limpia tapicería en espuma Binner' ↔ 'Limpia tapicería y alfombras Binner'
+--------------------------------------------------------------------------------
+  Cosine Similarity: 0.8497
+  Similarity Percentage: 92.49%
+  Cosine Distance: 0.1503
+  Normalized Distance (0-1): 0.0751
+  Distance Percentage: 7.51%
+  Metadata (Sentence 1): {'frequency': 100}
+  Metadata (Sentence 2): {'frequency': 50}
+
+'Limpia tapicería en espuma Binner' ↔ 'Limpiador Dr. Beckmann alfombras 2 en 1 poder oxi x 650 ml'
+--------------------------------------------------------------------------------
+  Cosine Similarity: 0.4881
+  Similarity Percentage: 74.40%
+  Cosine Distance: 0.5119
+  Normalized Distance (0-1): 0.2560
+  Distance Percentage: 25.60%
+  Metadata (Sentence 1): {'frequency': 100}
+  Metadata (Sentence 2): {'frequency': 10}
+
+'Limpia tapicería y alfombras Binner' ↔ 'Limpiador Dr. Beckmann alfombras 2 en 1 poder oxi x 650 ml'
+--------------------------------------------------------------------------------
+  Cosine Similarity: 0.5092
+  Similarity Percentage: 75.46%
+  Cosine Distance: 0.4908
+  Normalized Distance (0-1): 0.2454
+  Distance Percentage: 24.54%
+  Metadata (Sentence 1): {'frequency': 50}
+  Metadata (Sentence 2): {'frequency': 10}
+
+================================================================================
+Closest Semantic Match for Each Sentence (No Filtering)
+================================================================================
+Finding closest match for sentence 1/3: Limpia tapicería en espuma Binner...
+Finding closest match for sentence 2/3: Limpia tapicería y alfombras Binner...
+Finding closest match for sentence 3/3: Limpiador Dr. Beckmann alfombras 2 en 1 poder oxi ...
+
+================================================================================
+Closest Matches Analysis (No Filtering)
+================================================================================
+
+'Limpia tapicería en espuma Binner' ↔ 'Limpia tapicería y alfombras Binner'
+--------------------------------------------------------------------------------
+  Cosine Similarity: 0.8497
+  Similarity Percentage: 92.49%
+  Cosine Distance: 0.1503
+  Normalized Distance (0-1): 0.0751
+  Distance Percentage: 7.51%
+  Metadata (Sentence 1): {'frequency': 100}
+  Metadata (Sentence 2): {'frequency': 50}
+
+'Limpia tapicería y alfombras Binner' ↔ 'Limpia tapicería en espuma Binner'
+--------------------------------------------------------------------------------
+  Cosine Similarity: 0.8497
+  Similarity Percentage: 92.49%
+  Cosine Distance: 0.1503
+  Normalized Distance (0-1): 0.0751
+  Distance Percentage: 7.51%
+  Metadata (Sentence 1): {'frequency': 50}
+  Metadata (Sentence 2): {'frequency': 100}
+
+'Limpiador Dr. Beckmann alfombras 2 en 1 poder oxi x 650 ml' ↔ 'Limpia tapicería y alfombras Binner'
+--------------------------------------------------------------------------------
+  Cosine Similarity: 0.5092
+  Similarity Percentage: 75.46%
+  Cosine Distance: 0.4908
+  Normalized Distance (0-1): 0.2454
+  Distance Percentage: 24.54%
+  Metadata (Sentence 1): {'frequency': 10}
+  Metadata (Sentence 2): {'frequency': 50}
