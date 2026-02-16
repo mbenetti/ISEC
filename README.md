@@ -1469,15 +1469,6 @@ Define custom costs for character pair operations.
 
 If the `Operation` column is omitted, all rows default to substitution costs.
 
-## Files
-
-- `matriz_costo_caracteres.py` - Main implementation
-- `example_usage.py` - Comprehensive examples
-- `test_basic.py` - Unit tests
-- `GUIDE.md` - Full documentation
-- `quickstart.py` - Quick start examples
-- `Clases.xlsx` - Sample sentences file (edit with your data)
-- `Custom_cost.xlsx` - Sample custom costs file (edit with your costs)
 
 ## License MIT
 
