@@ -532,10 +532,10 @@ If you use ISEC in academic research, please cite:
 
 ```bibtex
 @software{isec2026,
-  title={ISEC: Índice de Sensibilidad al Error Categórico Calculator},
-  author={Your Name},
+  title={ISEC: Índice de Sensibilidad al Error Categórico},
+  author={Mauro A. Benetti},
   year={2026},
-  url={https://github.com/yourusername/ISEC}
+  url={https://github.com/mbenetti/ISEC}
 }
 ```
 
