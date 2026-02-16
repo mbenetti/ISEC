@@ -555,7 +555,7 @@ For issues, questions, or suggestions:
 - Check Ollama and Chroma setup
 - Verify Excel file formats
 
-## Related Projects
+## Related Projects documentation
 
 - [Levenshtein-Damerau Distance Calculator](COST_MATRIX_README.md)
 - [Semantic Distance Calculator](SEMANTIC_DISTANCE_README.md)
