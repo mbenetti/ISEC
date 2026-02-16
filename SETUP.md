@@ -49,20 +49,20 @@ uv sync
 
 ### 4. Verify Installation
 ```bash
-python --version  # Should show Python 3.12+
-python -c "import numpy; import pandas; print('✅ All dependencies installed')"
+# Run the verification script
+python verify_setup.py
 ```
 
 ## Running the Project
 
-### Run the Main Example
+### Run the App interface
 ```bash
-python matriz_costo_caracteres.py
+python app/main.py
 ```
 
-### Run Basic Tests
+### Run the Command Line Example
 ```bash
-python test_basic.py
+python quickstart.py
 ```
 
 ## Development Setup
@@ -87,13 +87,17 @@ uv run isort .
 ## Project Structure
 ```
 ISEC/
+├── app/                    # Web interface and API
+├── datasets/               # Example datasets
 ├── pyproject.toml          # Project configuration
-├── README.md              # Detailed documentation
-├── SETUP.md              # This quick guide
-├── matriz_costo_caracteres.py  # Main implementation
-├── test_basic.py         # Basic tests
-├── setup_demo.sh         # Setup demonstration script
-└── .gitignore           # Git ignore rules
+├── README.md               # Detailed documentation
+├── SETUP.md                # This quick guide
+├── ISEC.py                 # Main ISEC calculator
+├── matriz_costo_caracteres.py  # Morphological distance implementation
+├── Distancia_Semantica.py  # Semantic distance implementation
+├── verify_setup.py         # Setup verification script
+├── quickstart.py           # Quick start example
+└── .gitignore              # Git ignore rules
 ```
 
 ## Common Commands

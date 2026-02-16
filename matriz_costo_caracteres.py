@@ -802,6 +802,21 @@ def load_custom_costs_from_excel(
         return {}, {}
 
 
+def create_default_calculator():
+    """
+    Create a default EditCostCalculator using settings from Config.
+    
+    Returns:
+        EditCostCalculator: Configured calculator instance
+    """
+    return EditCostCalculator(
+        default_substitution_cost=Config.DEFAULT_SUBSTITUTION_COST,
+        default_insertion_cost=Config.DEFAULT_INSERTION_COST,
+        default_deletion_cost=Config.DEFAULT_DELETION_COST,
+        default_transposition_cost=Config.DEFAULT_TRANSPOSITION_COST,
+    )
+
+
 def main():
     """Demonstrate the Levenshtein-Damerau edit distance calculator with custom costs."""
 

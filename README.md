@@ -207,6 +207,28 @@ calculator.print_batch_results(results)
 calculator.export_to_excel(results, "ISEC_Results.xlsx")
 ```
 
+## Web Interface (App)
+
+The project includes a web interface to explore the models and visualize the ISEC calculations.
+
+### Running the App
+
+```bash
+# Using uv (recommended)
+uv run python app/main.py
+
+# Or using uvicorn directly
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+Once running, you can access the interface at `http://localhost:8000`.
+
+The app allows you to:
+- Browse different collections of sentences.
+- Adjust parameters (Alpha, Costs) in real-time.
+- Visualize semantic and morphological distances for specific pairs.
+- Export results for the entire collection.
+
 ### Custom Configuration
 ```python
 # Override configuration
@@ -472,16 +494,23 @@ $$Numerator = 1 + \log_{10}\left(\frac{F_{source} + F_{match}}{2}\right)$$
 
 ```
 ISEC/
-├── ISEC.py                        # Main ISEC calculator
-├── ISEC_README.md                 # This file
+├── app/                          # Web interface and API
+│   ├── main.py                   # FastAPI server
+│   ├── static/                   # Frontend assets
+│   ├── data/                     # Data files for the app
+│   └── ...
+├── datasets/                     # Example datasets (Excel files)
+├── resultados/                   # Analysis results and exports
 ├── matriz_costo_caracteres.py     # Levenshtein-Damerau calculator
 ├── Distancia_Semantica.py         # Semantic distance calculator
+├── ISEC.py                        # Main ISEC calculator
 ├── config.py                      # Configuration loader
-├── .env                          # Configuration file
-├── pyproject.toml                # Project dependencies
-├── Clases.xlsx                   # Sentences data
-├── Costo_Personalizado.xlsx      # Custom costs (optional)
-└── ISEC_Results.xlsx             # Output file
+├── .env                           # Configuration file
+├── pyproject.toml                 # Project configuration and dependencies
+├── verify_setup.py                # Setup verification script
+├── quickstart.py                  # Quick start example
+├── setup_demo.sh                  # Setup demonstration script
+└── README.md                      # This file
 ```
 
 ## Dependencies
