@@ -1481,7 +1481,7 @@ If the `Operation` column is omitted, all rows default to substitution costs.
 
 ## License MIT
 
-This project is part of PhD research at DI3 DOCTORADO EN INGENIERÍA INDUSTRIAL (UTN + UNC).
+This project is part of PhD research at DI3 - DOCTORADO EN INGENIERÍA INDUSTRIAL - Delegacion UNC Universidad Nacional de Cuyo, Argentina.
 
 Copyright (c) 2026 Mauro A. Benetti
 
