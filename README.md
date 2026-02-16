@@ -1502,3 +1502,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+If you use ISEC in academic research, please cite:
+
+```bibtex
+@software{isec2026,
+  title={ISEC: Índice de Sensibilidad al Error Categórico},
+  author={Mauro A. Benetti},
+  year={2026},
+  url={https://github.com/mbenetti/ISEC}
+}
+```
