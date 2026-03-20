@@ -3,11 +3,13 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 
+random.seed(42)
+
 # =================================================================
 # CONFIGURACIÓN DE PARÁMETROS (Basado en tu propuesta de tesis)
 # =================================================================
 K_PENALIZACION = 0.1  # Constante k para controlar la pendiente
-N_SIMULACIONES = 10000  # Número de iteraciones para rigor estadístico
+N_SIMULACIONES = 100000  # Número de iteraciones para rigor estadístico
 
 # Costos definidos
 COSTO_BAJO = 0.55  # Teclas cercanas / Errores probables
@@ -53,7 +55,7 @@ for _ in range(N_SIMULACIONES):
     # --- ESCENARIO B: DIVERGENCIA REAL (Expansión) ---
     # Más operaciones (3-6) con alta probabilidad de ser adiciones/eliminaciones
     n_ops_b = random.randint(3, 6)
-    # Definimos pesos: 80% estructural (1.1), 16% estándar (1.0), 4% bajo costo (0.5)
+    # Definimos pesos: 80% estructural, 16% estándar, 4% bajo costo
     ops_b = random.choices(
         [COSTO_ESTRUCT, COSTO_STD, COSTO_BAJO], weights=[80, 16, 4], k=n_ops_b
     )
@@ -111,7 +113,7 @@ plt.text(
 
 # Etiquetas y títulos
 plt.title(
-    "Comportamiento del CMP: Validación del comportamiento Errores vs Divergencia \ncon Simulación de Montecarlo)",
+    "Comportamiento del CMP: Validación del comportamiento Afinidad vs Divergencia \ncon Simulación de Montecarlo)",
     fontsize=14,
 )
 plt.xlabel("Valor del CMP (Modulador del Denominador en ISEC)", fontsize=12)
