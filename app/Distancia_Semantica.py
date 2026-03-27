@@ -105,7 +105,7 @@ class SemanticDistanceCalculator:
 
         try:
             response = self.ollama_client.embed(model=self.embedding_model, input=text)
-            embedding = response["embeddings"][0]
+            embedding = response.embeddings[0]
             self.embeddings_cache[text] = embedding
             return embedding
         except Exception as e:
@@ -143,7 +143,9 @@ class SemanticDistanceCalculator:
             try:
                 embedding = self.get_embedding(sentence)
                 embeddings.append(embedding)
-                ids.append(f"sent_{i}_{sentence[:10]}") # unique ids based somewhat on content
+                ids.append(
+                    f"sent_{i}_{sentence[:10]}"
+                )  # unique ids based somewhat on content
                 self.metadata_cache[sentence] = metadata
                 print(
                     f"  ✓ Embedded sentence {i + 1}/{len(sentences)}: {sentence[:50]}..."
@@ -287,26 +289,30 @@ class SemanticDistanceCalculator:
             List of (sentence, normalized_distance, metadata)
         """
         embedding = self.get_embedding(query_sentence)
-        
+
         # Build where clause
         where_clause = {}
         if source_filter:
             where_clause["source"] = source_filter
 
         # Use provided metadata or fallback to cache
-        current_metadata = query_metadata if query_metadata is not None else self.metadata_cache.get(query_sentence, {})
+        current_metadata = (
+            query_metadata
+            if query_metadata is not None
+            else self.metadata_cache.get(query_sentence, {})
+        )
         current_group = current_metadata.get("group")
         current_subgroup = current_metadata.get("subgroup")
 
         # Fetch candidate matches
         # We fetch more than k because we might filter some out
-        fetch_k = k * 10 # heuristic: fetch 10x to be safe
-            
+        fetch_k = k * 10  # heuristic: fetch 10x to be safe
+
         # Limit to collection size
         collection_count = self.collection.count()
         if fetch_k > collection_count:
             fetch_k = collection_count
-        
+
         # Avoid 0
         if fetch_k < 1:
             fetch_k = 1
@@ -316,7 +322,7 @@ class SemanticDistanceCalculator:
             "n_results": fetch_k,
             "include": ["distances", "metadatas", "documents"],
         }
-        
+
         if where_clause:
             query_args["where"] = where_clause
 
@@ -326,37 +332,37 @@ class SemanticDistanceCalculator:
             # Fallback if query fails (e.g. invalid where clause or empty collection)
             print(f"Query error: {e}")
             return []
-        
+
         potential_matches = []
-        
+
         if results and results["documents"] and len(results["documents"]) > 0:
             docs = results["documents"][0]
             dists = results["distances"][0]
             metas = results["metadatas"][0]
-            
+
             for doc, dist, meta in zip(docs, dists, metas):
                 if doc == query_sentence:
                     continue
-                
+
                 # Double check source if we can (Chroma should have filtered, but safer)
                 if source_filter and meta.get("source") != source_filter:
                     continue
-                    
+
                 # Filter by group/subgroup
                 if exclude_same_group and current_group is not None:
                     if meta.get("group") == current_group:
                         continue
-                        
+
                 if exclude_same_subgroup and current_subgroup is not None:
                     if meta.get("subgroup") == current_subgroup:
                         continue
-                
+
                 # Convert cosine distance to normalized distance (0-1)
                 cosine_similarity = 1 - dist
                 normalized_distance = (1 - cosine_similarity) / 2
-                
+
                 potential_matches.append((doc, normalized_distance, meta))
-                
+
         # Sort by distance and take top k
         potential_matches.sort(key=lambda x: x[1])
         return potential_matches[:k]
