@@ -68,7 +68,7 @@ echo ""
 # Step 6: Run basic tests
 echo "Step 6: Running basic tests..."
 echo "-----------------------------------------"
-python test_basic.py
+python quickstart.py
 echo "-----------------------------------------"
 echo ""
 

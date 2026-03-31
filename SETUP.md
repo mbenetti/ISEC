@@ -19,11 +19,17 @@
    ```
 
 ## Quick Setup (One-Liner)
+  ### Option 1 set up the environment 
+  Create virtual environment and install dependencies
 
-```bash
-# Create virtual environment and install dependencies
-uv venv && source .venv/bin/activate && uv sync
-```
+  ```bash
+  uv venv && source .venv/bin/activate && uv sync
+  ```
+
+  ### Option 2: One line script to set up the environment
+  ```bash
+  sh setup_demo.sh
+  ```
 
 ## Step-by-Step Setup
 
