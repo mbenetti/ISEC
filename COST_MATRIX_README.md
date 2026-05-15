@@ -50,7 +50,7 @@ SAME_SUBGROUP_EXCLUSION=False
 
 The calculator provides a **Penalized Distance** metric that combines average cost with edit operation penalties:
 
-$$\text{penalized\_distance} = \text{average\_cost} + (k \times \text{sum\_edit\_costs})$$
+$$\text{penalized-distance} = \text{average-cost} + (k \times \text{sum-edit-costs})$$
 
 Where:
 - `average_cost` = total_cost / number_of_operations (average per-operation cost)
