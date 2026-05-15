@@ -554,7 +554,7 @@ For issues, questions, or suggestions:
 ## Related Projects documentation
 
 - [Levenshtein-Damerau Distance Calculator](COST_MATRIX_README.md)
-- [Semantic Distance Calculator](SEMANTIC_DISTANCE_README.md)
+- [Semantic Distance Calculator](Distancia_Semantica_README.md)
 
 ## Algorithm Pseudocode
 
