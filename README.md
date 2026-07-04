@@ -221,6 +221,8 @@ uv run python app/main.py
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
+<img src="ing/Screenshot 2026-02-24 at 06.38.56.png" alt="Web UI" width="800" />
+
 Once running, you can access the interface at `http://localhost:8000`.
 
 The app allows you to:
