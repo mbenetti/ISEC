@@ -1,0 +1,41 @@
+[
+  {
+    "archivo": "resultados/ISEC_provincias_Results.xlsx",
+    "total_pares_evaluados": 2590,
+    "n_categorias": 259,
+    "m_teorico": 33411,
+    "mu_isec": 3.7147662548262548,
+    "mad_t": 1.062765790849868,
+    "mad_t_normalizado": 0.28609223782764637,
+    "isec_min": 1.0654,
+    "isec_max": 10.2287,
+    "isec_mediana": 3.6028000000000002,
+    "isec_desv_std": 1.3051785127613789
+  },
+  {
+    "archivo": "resultados/ISEC_catalog_Results.xlsx",
+    "total_pares_evaluados": 66760,
+    "n_categorias": 6676,
+    "m_teorico": 22281150,
+    "mu_isec": 0.5796074970041942,
+    "mad_t": 0.10484986371282125,
+    "mad_t_normalizado": 0.18089804609974278,
+    "isec_min": 0.2467,
+    "isec_max": 5.6695,
+    "isec_mediana": 0.5571,
+    "isec_desv_std": 0.14500545033029122
+  },
+  {
+    "archivo": "resultados/ISEC_insertos1000_Results.xlsx",
+    "total_pares_evaluados": 10000,
+    "n_categorias": 1000,
+    "m_teorico": 499500,
+    "mu_isec": 1.44852291,
+    "mad_t": 0.15265017984800003,
+    "mad_t_normalizado": 0.10538333829183276,
+    "isec_min": 1.0095,
+    "isec_max": 3.7345,
+    "isec_mediana": 1.3921000000000001,
+    "isec_desv_std": 0.2099440553055311
+  }
+]

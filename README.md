@@ -727,16 +727,6 @@ STRUCTURE: ISECResult
 END STRUCTURE
 ```
 
-### Performance Characteristics
-
-- **Time Complexity**: O(n × k × m) where:
-  - n = number of sentences
-  - k = top-k matches
-  - m = average sentence length
-  
-- **Space Complexity**: O(n × d) where:
-  - n = number of sentences
-  - d = embedding dimension (typically 384-1024)
 
 ## Related Projects
 
